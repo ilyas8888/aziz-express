@@ -225,6 +225,7 @@
     <p>Appuyez sur <strong>Envoyer</strong> dans WhatsApp,<br>puis revenez ici pour confirmer.</p>
     <button class="btn-confirm" onclick="confirmSent()">✅ J'ai envoyé le message</button>
     <button class="btn-resend" onclick="resend()">🔄 Renvoyer</button>
+    <button class="btn-resend" style="margin-top:8px;color:#64748b;border-color:#e2e8f0;" onclick="goBack()">← Modifier ma commande</button>
   </div>
 
   <!-- SUCCESS -->
@@ -303,6 +304,11 @@ _Envoyé depuis aziz-express_`;
 
   function resend() {
     window.open(window._lastWaUrl, '_blank');
+  }
+
+  function goBack() {
+    document.getElementById('confirmSection').style.display = 'none';
+    document.getElementById('formSection').style.display    = 'block';
   }
 </script>
 </body>
