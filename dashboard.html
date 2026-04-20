@@ -144,6 +144,46 @@
       cursor: pointer;
     }
 
+    /* DEMANDES */
+    .card-demande {
+      background: white;
+      border-radius: 16px;
+      padding: 16px 18px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+      border-left: 4px solid #f59e0b;
+    }
+
+    .card-demande .client-name  { font-size: 16px; font-weight: bold; color: #222; }
+    .card-demande .client-phone { font-size: 13px; color: #888; margin-top: 3px; }
+    .card-demande .demande-time { font-size: 12px; color: #f59e0b; margin-top: 4px; font-weight: bold; }
+    .card-demande .demande-details { font-size: 13px; color: #64748b; margin-top: 6px; }
+
+    .demande-actions {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .btn-accept {
+      background: linear-gradient(135deg, #FF5A1F, #FF8C42);
+      color: white; border: none; border-radius: 12px;
+      padding: 11px; font-size: 14px; font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-refuse {
+      background: #fdecea; color: #e74c3c;
+      border: none; border-radius: 10px;
+      padding: 11px 14px; font-size: 14px; font-weight: 600;
+      cursor: pointer;
+    }
+
+    .demande-expire {
+      font-size: 11px; color: #94a3b8;
+      margin-top: 6px;
+    }
+
     .history-link {
       display: block;
       text-align: center;
@@ -227,6 +267,13 @@
   </div>
 </div>
 
+<!-- DEMANDES -->
+<div class="section-header">
+  <h2>📬 Demandes</h2>
+  <span class="count" id="demandeCount">0</span>
+</div>
+<div class="deliveries" id="demandeList"></div>
+
 <div class="search-box">
   <input id="searchInput" type="text" placeholder="🔍 Rechercher un client..." oninput="renderList()" />
 </div>
@@ -264,6 +311,8 @@
   });
 
   let allDeliveries = [];
+  let allDemandes   = [];
+  const TWELVE_HOURS = 12 * 60 * 60 * 1000;
 
   document.getElementById('headerDate').textContent =
     new Date().toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
@@ -345,6 +394,88 @@
     if (!confirm('Supprimer ?')) return;
     db.ref('livraisons/' + id).remove();
   }
+
+  function renderDemandes() {
+    const now  = Date.now();
+    const list = document.getElementById('demandeList');
+    list.innerHTML = '';
+
+    const pending = allDemandes.filter(d => d.status === 'pending');
+    document.getElementById('demandeCount').textContent  = pending.length;
+    document.getElementById('demandeCount').className    = 'count' + (pending.length === 0 ? ' zero' : '');
+
+    if (pending.length === 0) {
+      list.innerHTML = `<div class="empty" style="padding:16px 20px"><div class="icon" style="font-size:28px">📭</div>Aucune demande en attente</div>`;
+      return;
+    }
+
+    pending.forEach(d => {
+      const remaining = Math.max(0, TWELVE_HOURS - (now - d.timestamp));
+      const hLeft     = Math.floor(remaining / 3600000);
+      const mLeft     = Math.floor((remaining % 3600000) / 60000);
+      const expireStr = remaining > 0 ? `Expire dans ${hLeft}h ${mLeft}min` : 'Expirée';
+
+      const mapsLink = d.lat && d.lng
+        ? `<a href="https://maps.google.com/?q=${d.lat},${d.lng}" target="_blank" style="color:#FF5A1F;font-size:13px;">📍 Voir position</a>`
+        : '';
+
+      const card = document.createElement('div');
+      card.className = 'card-demande';
+      card.innerHTML = `
+        <div class="client-name">${d.clientName || 'Client inconnu'}</div>
+        ${d.clientPhone ? `<div class="client-phone">📞 ${d.clientPhone}</div>` : ''}
+        ${d.details    ? `<div class="demande-details">📦 ${d.details}</div>` : ''}
+        ${mapsLink}
+        <div class="demande-time">🕐 Reçue il y a ${timeAgo(d.timestamp)}</div>
+        <div class="demande-expire">${expireStr}</div>
+        <div class="demande-actions">
+          <button class="btn-accept">✓ Accepter & démarrer</button>
+          <button class="btn-refuse">✗ Refuser</button>
+        </div>
+      `;
+      card.querySelector('.btn-accept').onclick = () => acceptDemande(d);
+      card.querySelector('.btn-refuse').onclick = () => refuseDemande(d.id);
+      list.appendChild(card);
+    });
+  }
+
+  function acceptDemande(d) {
+    const deliveryId = 'livraison_' + Date.now();
+    db.ref('livraisons/' + deliveryId).set({
+      active:      true,
+      clientName:  d.clientName,
+      clientPhone: d.clientPhone,
+      details:     d.details || '',
+      destLat:     d.lat  || null,
+      destLng:     d.lng  || null,
+      timestamp:   Date.now()
+    });
+    db.ref('demandes/' + d.id).remove();
+  }
+
+  function refuseDemande(id) {
+    if (!confirm('Refuser cette demande ?')) return;
+    db.ref('demandes/' + id).remove();
+  }
+
+  // Supprimer demandes +12h
+  function cleanOldDemandes(demandes) {
+    const now = Date.now();
+    demandes.forEach(d => {
+      if (now - d.timestamp > TWELVE_HOURS) {
+        db.ref('demandes/' + d.id).remove();
+      }
+    });
+  }
+
+  db.ref('demandes').on('value', snap => {
+    const data = snap.val() || {};
+    allDemandes = Object.entries(data)
+      .map(([id, v]) => ({ id, ...v }))
+      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    cleanOldDemandes(allDemandes);
+    renderDemandes();
+  });
 
   db.ref('livraisons').on('value', snap => {
     const data = snap.val() || {};

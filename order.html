@@ -20,9 +20,21 @@
       background: #0F172A;
       color: white;
       padding: 18px 20px;
-      text-align: center;
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
 
+    .btn-back {
+      background: rgba(255,255,255,0.12);
+      border: none; color: white;
+      padding: 7px 12px; border-radius: 8px;
+      font-size: 15px; cursor: pointer;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .header-center { flex: 1; text-align: center; }
     header h1 { font-size: 20px; font-weight: 700; }
     header p  { font-size: 13px; opacity: 0.6; margin-top: 3px; }
 
@@ -103,8 +115,40 @@
       box-shadow: 0 6px 20px rgba(255,90,31,0.35);
       letter-spacing: 0.2px;
     }
-
     .btn-submit:active { transform: scale(0.98); }
+
+    /* CONFIRM */
+    .confirm {
+      display: none;
+      text-align: center;
+      padding: 40px 20px;
+    }
+    .confirm .icon { font-size: 56px; margin-bottom: 16px; }
+    .confirm h2 {
+      font-size: 20px; font-weight: 700;
+      color: #0F172A; margin-bottom: 8px;
+    }
+    .confirm p {
+      font-size: 14px; color: #64748b;
+      line-height: 1.6; margin-bottom: 24px;
+    }
+    .btn-confirm {
+      width: 100%; padding: 15px;
+      background: linear-gradient(135deg, #FF5A1F, #FF8C42);
+      color: white; border: none; border-radius: 14px;
+      font-size: 16px; font-weight: 700;
+      font-family: 'Poppins', sans-serif;
+      cursor: pointer; margin-bottom: 10px;
+      box-shadow: 0 6px 20px rgba(255,90,31,0.35);
+    }
+    .btn-resend {
+      width: 100%; padding: 13px;
+      background: white; color: #FF5A1F;
+      border: 1.5px solid #FF5A1F; border-radius: 14px;
+      font-size: 15px; font-weight: 600;
+      font-family: 'Poppins', sans-serif;
+      cursor: pointer;
+    }
 
     /* SUCCESS */
     .success {
@@ -112,17 +156,11 @@
       text-align: center;
       padding: 40px 20px;
     }
-
-    .success .icon {
-      font-size: 64px;
-      margin-bottom: 16px;
-    }
-
+    .success .icon { font-size: 64px; margin-bottom: 16px; }
     .success h2 {
       font-size: 22px; font-weight: 700;
       color: #0F172A; margin-bottom: 8px;
     }
-
     .success p {
       font-size: 14px; color: #64748b;
       line-height: 1.6;
@@ -133,51 +171,16 @@
       text-align: center; margin-top: 12px;
       line-height: 1.6;
     }
-
-    /* CONFIRM */
-    .confirm {
-      display: none;
-      text-align: center;
-      padding: 40px 20px;
-    }
-
-    .confirm .icon { font-size: 56px; margin-bottom: 16px; }
-
-    .confirm h2 {
-      font-size: 20px; font-weight: 700;
-      color: #0F172A; margin-bottom: 8px;
-    }
-
-    .confirm p {
-      font-size: 14px; color: #64748b;
-      line-height: 1.6; margin-bottom: 24px;
-    }
-
-    .btn-confirm {
-      width: 100%; padding: 15px;
-      background: linear-gradient(135deg, #FF5A1F, #FF8C42);
-      color: white; border: none; border-radius: 14px;
-      font-size: 16px; font-weight: 700;
-      font-family: 'Poppins', sans-serif;
-      cursor: pointer; margin-bottom: 10px;
-      box-shadow: 0 6px 20px rgba(255,90,31,0.35);
-    }
-
-    .btn-resend {
-      width: 100%; padding: 13px;
-      background: white; color: #FF5A1F;
-      border: 1.5px solid #FF5A1F; border-radius: 14px;
-      font-size: 15px; font-weight: 600;
-      font-family: 'Poppins', sans-serif;
-      cursor: pointer;
-    }
   </style>
 </head>
 <body>
 
 <header>
-  <h1>🛵 Aziz Express</h1>
-  <p>Livraison rapide à Oujda</p>
+  <a class="btn-back" href="index.html">← Retour</a>
+  <div class="header-center">
+    <h1>🛵 Aziz Express</h1>
+    <p>Livraison rapide à Oujda</p>
+  </div>
 </header>
 
 <div class="container">
@@ -238,6 +241,9 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
 <script>
   const AZIZ_PHONE = '212616937149';
   const OUJDA = [34.6867, -1.9114];
@@ -245,6 +251,7 @@
   let selectedLat = null;
   let selectedLng = null;
   let marker = null;
+  let pendingDemandeId = null;
 
   const map = L.map('map').setView(OUJDA, 13);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
@@ -289,17 +296,29 @@ ${details ? `📦 *Détails :* ${details}` : ''}
 
 _Envoyé depuis aziz-express_`;
 
+    // Sauvegarder dans Firebase
+    const ref = db.ref('demandes').push({
+      clientName:  name,
+      clientPhone: phone,
+      details:     details,
+      lat:         selectedLat,
+      lng:         selectedLng,
+      timestamp:   Date.now(),
+      status:      'pending'
+    });
+    pendingDemandeId = ref.key;
+
     const waUrl = `https://wa.me/${AZIZ_PHONE}?text=${encodeURIComponent(msg)}`;
     window._lastWaUrl = waUrl;
     window.open(waUrl, '_blank');
 
-    document.getElementById('formSection').style.display  = 'none';
+    document.getElementById('formSection').style.display    = 'none';
     document.getElementById('confirmSection').style.display = 'block';
   }
 
   function confirmSent() {
     document.getElementById('confirmSection').style.display = 'none';
-    document.getElementById('successSection').style.display  = 'block';
+    document.getElementById('successSection').style.display = 'block';
   }
 
   function resend() {
@@ -307,6 +326,11 @@ _Envoyé depuis aziz-express_`;
   }
 
   function goBack() {
+    // Supprimer la demande si l'utilisateur revient en arrière
+    if (pendingDemandeId) {
+      db.ref('demandes/' + pendingDemandeId).remove();
+      pendingDemandeId = null;
+    }
     document.getElementById('confirmSection').style.display = 'none';
     document.getElementById('formSection').style.display    = 'block';
   }
