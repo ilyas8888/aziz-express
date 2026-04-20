@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <title>Commander — Aziz Express</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #FFF5F0;
+      min-height: 100vh;
+      padding-bottom: 40px;
+    }
+
+    header {
+      background: #0F172A;
+      color: white;
+      padding: 18px 20px;
+      text-align: center;
+    }
+
+    header h1 { font-size: 20px; font-weight: 700; }
+    header p  { font-size: 13px; opacity: 0.6; margin-top: 3px; }
+
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 20px 16px;
+    }
+
+    .step {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    .step-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #FF5A1F;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .form-group { margin-bottom: 12px; }
+    .form-group label {
+      font-size: 12px; font-weight: 500;
+      color: #64748b; display: block; margin-bottom: 5px;
+    }
+    .form-group input, .form-group textarea {
+      width: 100%; padding: 12px 14px;
+      border-radius: 10px; border: 1.5px solid #e2e8f0;
+      font-size: 15px; font-family: 'Poppins', sans-serif;
+      outline: none; transition: border-color 0.2s;
+    }
+    .form-group input:focus, .form-group textarea:focus {
+      border-color: #FF5A1F;
+    }
+    .form-group textarea { resize: none; height: 80px; }
+
+    /* MAP */
+    .map-hint { font-size: 12px; color: #94a3b8; margin-bottom: 8px; }
+    #map {
+      width: 100%; height: 200px;
+      border-radius: 12px; border: 1.5px solid #e2e8f0;
+      margin-bottom: 8px;
+    }
+    #map.selected { border-color: #FF5A1F; }
+
+    .coords-display {
+      font-size: 12px; font-weight: 600;
+      color: #FF5A1F; min-height: 18px;
+      margin-bottom: 10px;
+    }
+
+    .btn-gps {
+      width: 100%; padding: 11px;
+      background: #FFF5F0; color: #FF5A1F;
+      border: 1.5px solid #FF5A1F; border-radius: 10px;
+      font-size: 14px; font-weight: 600;
+      font-family: 'Poppins', sans-serif;
+      cursor: pointer;
+    }
+
+    /* SUBMIT */
+    .btn-submit {
+      width: 100%; padding: 16px;
+      background: linear-gradient(135deg, #FF5A1F, #FF8C42);
+      color: white; border: none;
+      border-radius: 14px; font-size: 16px;
+      font-weight: 700; font-family: 'Poppins', sans-serif;
+      cursor: pointer; margin-top: 6px;
+      box-shadow: 0 6px 20px rgba(255,90,31,0.35);
+      letter-spacing: 0.2px;
+    }
+
+    .btn-submit:active { transform: scale(0.98); }
+
+    /* SUCCESS */
+    .success {
+      display: none;
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .success .icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+    }
+
+    .success h2 {
+      font-size: 22px; font-weight: 700;
+      color: #0F172A; margin-bottom: 8px;
+    }
+
+    .success p {
+      font-size: 14px; color: #64748b;
+      line-height: 1.6;
+    }
+
+    .note {
+      font-size: 12px; color: #94a3b8;
+      text-align: center; margin-top: 12px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🛵 Aziz Express</h1>
+  <p>Livraison rapide à Oujda</p>
+</header>
+
+<div class="container">
+
+  <!-- FORM -->
+  <div id="formSection">
+
+    <div class="step">
+      <div class="step-title">👤 Vos informations</div>
+      <div class="form-group">
+        <label>Nom complet</label>
+        <input id="clientName" type="text" placeholder="Ex: Mohammed Alami" />
+      </div>
+      <div class="form-group">
+        <label>Téléphone WhatsApp</label>
+        <input id="clientPhone" type="tel" placeholder="Ex: 0612345678" />
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-title">📍 Votre adresse de livraison</div>
+      <p class="map-hint">Tapez sur la carte pour marquer votre position exacte :</p>
+      <div id="map"></div>
+      <div class="coords-display" id="coordsDisplay">Aucune position sélectionnée</div>
+      <button class="btn-gps" onclick="useGPS()">📡 Utiliser ma position GPS</button>
+    </div>
+
+    <div class="step">
+      <div class="step-title">📦 Détails de la commande</div>
+      <div class="form-group">
+        <label>Description (optionnel)</label>
+        <textarea id="orderDetails" placeholder="Ex: 2 colis depuis le marché central..."></textarea>
+      </div>
+    </div>
+
+    <button class="btn-submit" onclick="submitOrder()">Envoyer ma commande via WhatsApp →</button>
+    <p class="note">Votre commande sera envoyée à Aziz via WhatsApp.<br>Il vous confirme la livraison rapidement.</p>
+
+  </div>
+
+  <!-- SUCCESS -->
+  <div class="success" id="successSection">
+    <div class="icon">✅</div>
+    <h2>Commande envoyée !</h2>
+    <p>Aziz a reçu votre commande.<br>Il vous contacte bientôt pour confirmer.</p>
+  </div>
+
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  const AZIZ_PHONE = '212616937149';
+  const OUJDA = [34.6867, -1.9114];
+
+  let selectedLat = null;
+  let selectedLng = null;
+  let marker = null;
+
+  const map = L.map('map').setView(OUJDA, 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+  map.on('click', e => placeMarker(e.latlng.lat, e.latlng.lng));
+
+  function placeMarker(lat, lng) {
+    selectedLat = lat;
+    selectedLng = lng;
+    if (marker) map.removeLayer(marker);
+    marker = L.marker([lat, lng]).addTo(map);
+    document.getElementById('map').classList.add('selected');
+    document.getElementById('coordsDisplay').textContent =
+      `✓ Position marquée : ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    map.setView([lat, lng], 15);
+  }
+
+  function useGPS() {
+    if (!navigator.geolocation) return alert('GPS non supporté');
+    navigator.geolocation.getCurrentPosition(
+      pos => placeMarker(pos.coords.latitude, pos.coords.longitude),
+      ()  => alert("Impossible d'obtenir la position")
+    );
+  }
+
+  function submitOrder() {
+    const name    = document.getElementById('clientName').value.trim();
+    const phone   = document.getElementById('clientPhone').value.trim();
+    const details = document.getElementById('orderDetails').value.trim();
+
+    if (!name)  return alert('Entrez votre nom');
+    if (!phone) return alert('Entrez votre téléphone');
+    if (!selectedLat) return alert('Marquez votre position sur la carte');
+
+    const mapsLink = `https://maps.google.com/?q=${selectedLat},${selectedLng}`;
+
+    const msg = `🛵 *Nouvelle commande — Aziz Express*
+
+👤 *Client :* ${name}
+📞 *Téléphone :* ${phone}
+📍 *Position :* ${mapsLink}
+${details ? `📦 *Détails :* ${details}` : ''}
+
+_Envoyé depuis aziz-express_`;
+
+    const waUrl = `https://wa.me/${AZIZ_PHONE}?text=${encodeURIComponent(msg)}`;
+    window.open(waUrl, '_blank');
+
+    document.getElementById('formSection').style.display = 'none';
+    document.getElementById('successSection').style.display = 'block';
+  }
+</script>
+</body>
+</html>
