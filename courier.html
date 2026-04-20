@@ -340,6 +340,14 @@
         }
         db.ref("livraisons/" + deliveryId).update(deliveryData);
 
+        // Ouvrir WhatsApp automatiquement si numéro disponible
+        if (clientPhone) {
+          const trackUrl = window.location.href.replace(/[^/]*$/, '') + 'track.html?id=' + deliveryId;
+          const msg = encodeURIComponent('Bonjour ! 👋 Votre livraison est en route.\nSuivez votre livreur en direct 🛵 : ' + trackUrl);
+          const waUrl = 'https://wa.me/212' + clientPhone.replace(/^0/, '') + '?text=' + msg;
+          setTimeout(() => window.open(waUrl, '_blank'), 800);
+        }
+
         // Auto-enregistrer le client dans contacts s'il n'existe pas encore
         const selectedVal = document.getElementById('contactSelect').value;
         if (!selectedVal && clientName !== "Client") {
