@@ -3,19 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <title>Dashboard — Aziz Express</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Poppins', sans-serif;
       background: #FFF5F0;
       min-height: 100vh;
       padding-bottom: 70px;
     }
 
     header {
-      background: #FF5A1F;
+      background: #0F172A;
       color: white;
       padding: 14px 20px;
       display: flex;
@@ -46,14 +47,15 @@
 
     .stat-card {
       background: white;
-      border-radius: 12px;
-      padding: 12px 8px;
+      border-radius: 14px;
+      padding: 14px 8px;
       text-align: center;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      border-top: 3px solid #FF5A1F;
     }
 
-    .stat-card .number { font-size: 26px; font-weight: bold; color: #FF5A1F; }
-    .stat-card .label  { font-size: 11px; color: #888; margin-top: 2px; }
+    .stat-card .number { font-size: 28px; font-weight: 700; color: #0F172A; }
+    .stat-card .label  { font-size: 11px; font-weight: 500; color: #94a3b8; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
 
     .stat-card.clickable { cursor: pointer; }
     .stat-card.clickable:active { background: #FFF5F0; }
@@ -80,17 +82,17 @@
     }
 
     .section-header h2 { font-size: 14px; font-weight: bold; color: #444; text-transform: uppercase; letter-spacing: 0.5px; }
-    .section-header .count { background: #FF5A1F; color: white; font-size: 11px; font-weight: bold; padding: 2px 8px; border-radius: 20px; }
+    .section-header .count { background: #0F172A; color: white; font-size: 11px; font-weight: bold; padding: 2px 8px; border-radius: 20px; }
     .section-header .count.zero { background: #ccc; }
 
     .deliveries { padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
 
     .card-active {
       background: white;
-      border-radius: 14px;
-      padding: 16px;
-      box-shadow: 0 2px 8px rgba(255,90,31,0.12);
-      border-left: 5px solid #FF5A1F;
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      border-left: 4px solid #FF5A1F;
     }
 
     .card-active .client-name  { font-size: 17px; font-weight: bold; color: #222; }
@@ -105,21 +107,19 @@
     }
 
     .btn-wa {
-      background: #FF5A1F; color: white;
-      border: none; border-radius: 10px;
-      padding: 11px; font-size: 14px;
-      font-weight: bold; cursor: pointer;
-      text-decoration: none; text-align: center;
-      display: block;
+      background: linear-gradient(135deg, #FF5A1F, #FF8C42);
+      color: white; border: none; border-radius: 12px;
+      padding: 12px; font-size: 14px; font-weight: 600;
+      cursor: pointer; text-decoration: none; text-align: center;
+      display: block; box-shadow: 0 4px 12px rgba(255,90,31,0.3);
     }
 
     .btn-track {
-      background: #FFF5F0; color: #FF5A1F;
-      border: 2px solid #FF5A1F; border-radius: 10px;
-      padding: 11px; font-size: 14px;
-      font-weight: bold; cursor: pointer;
-      text-decoration: none; text-align: center;
-      display: block;
+      background: white; color: #0F172A;
+      border: 1.5px solid #e2e8f0; border-radius: 12px;
+      padding: 12px; font-size: 14px; font-weight: 600;
+      cursor: pointer; text-decoration: none; text-align: center;
+      display: block; box-shadow: 0 2px 6px rgba(0,0,0,0.05);
     }
 
     .active-actions-2 {
@@ -130,10 +130,11 @@
     }
 
     .btn-finish {
-      background: #1A1A2E; color: white;
-      border: none; border-radius: 10px;
+      background: #0F172A; color: white;
+      border: none; border-radius: 12px;
       padding: 10px; font-size: 13px;
-      font-weight: bold; cursor: pointer;
+      font-weight: 600; cursor: pointer;
+      letter-spacing: 0.2px;
     }
 
     .btn-delete-sm {
@@ -184,7 +185,7 @@
     .nav-item .icon  { font-size: 22px; }
 
     .nav-item.center {
-      background: #FF5A1F;
+      background: #0F172A;
       color: white;
       border-radius: 16px 16px 0 0;
       margin: 0 8px;
