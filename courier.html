@@ -181,8 +181,10 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <script src="firebase-config.js"></script>
     <script>
+      const BASE = window.location.pathname.replace(/\/[^/]*$/, '/');
+
       firebase.auth().onAuthStateChanged(user => {
-        if (!user) window.location.href = 'login.html';
+        if (!user) window.location.href = BASE + 'login.html';
       });
 
       let watchId = null;
