@@ -133,6 +133,44 @@
       text-align: center; margin-top: 12px;
       line-height: 1.6;
     }
+
+    /* CONFIRM */
+    .confirm {
+      display: none;
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .confirm .icon { font-size: 56px; margin-bottom: 16px; }
+
+    .confirm h2 {
+      font-size: 20px; font-weight: 700;
+      color: #0F172A; margin-bottom: 8px;
+    }
+
+    .confirm p {
+      font-size: 14px; color: #64748b;
+      line-height: 1.6; margin-bottom: 24px;
+    }
+
+    .btn-confirm {
+      width: 100%; padding: 15px;
+      background: linear-gradient(135deg, #FF5A1F, #FF8C42);
+      color: white; border: none; border-radius: 14px;
+      font-size: 16px; font-weight: 700;
+      font-family: 'Poppins', sans-serif;
+      cursor: pointer; margin-bottom: 10px;
+      box-shadow: 0 6px 20px rgba(255,90,31,0.35);
+    }
+
+    .btn-resend {
+      width: 100%; padding: 13px;
+      background: white; color: #FF5A1F;
+      border: 1.5px solid #FF5A1F; border-radius: 14px;
+      font-size: 15px; font-weight: 600;
+      font-family: 'Poppins', sans-serif;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -178,6 +216,15 @@
     <button class="btn-submit" onclick="submitOrder()">Envoyer ma commande via WhatsApp →</button>
     <p class="note">Votre commande sera envoyée à Aziz via WhatsApp.<br>Il vous confirme la livraison rapidement.</p>
 
+  </div>
+
+  <!-- CONFIRM -->
+  <div class="confirm" id="confirmSection">
+    <div class="icon">💬</div>
+    <h2>WhatsApp est ouvert</h2>
+    <p>Appuyez sur <strong>Envoyer</strong> dans WhatsApp,<br>puis revenez ici pour confirmer.</p>
+    <button class="btn-confirm" onclick="confirmSent()">✅ J'ai envoyé le message</button>
+    <button class="btn-resend" onclick="resend()">🔄 Renvoyer</button>
   </div>
 
   <!-- SUCCESS -->
@@ -242,10 +289,20 @@ ${details ? `📦 *Détails :* ${details}` : ''}
 _Envoyé depuis aziz-express_`;
 
     const waUrl = `https://wa.me/${AZIZ_PHONE}?text=${encodeURIComponent(msg)}`;
+    window._lastWaUrl = waUrl;
     window.open(waUrl, '_blank');
 
-    document.getElementById('formSection').style.display = 'none';
-    document.getElementById('successSection').style.display = 'block';
+    document.getElementById('formSection').style.display  = 'none';
+    document.getElementById('confirmSection').style.display = 'block';
+  }
+
+  function confirmSent() {
+    document.getElementById('confirmSection').style.display = 'none';
+    document.getElementById('successSection').style.display  = 'block';
+  }
+
+  function resend() {
+    window.open(window._lastWaUrl, '_blank');
   }
 </script>
 </body>
