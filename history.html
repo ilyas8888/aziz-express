@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Historique — Aziz Express</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+      padding-bottom: 70px;
+    }
+
+    header {
+      background: #25D366;
+      color: white;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+
+    header h1 { font-size: 18px; }
+    .btn-back {
+      background: rgba(255,255,255,0.2);
+      border: none; color: white;
+      padding: 6px 12px; border-radius: 8px;
+      cursor: pointer; font-size: 13px;
+      text-decoration: none;
+    }
+
+    .search-box {
+      padding: 14px 16px 0;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 11px 14px;
+      border-radius: 12px;
+      border: 1px solid #ddd;
+      font-size: 14px;
+      background: white;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px 8px;
+    }
+
+    .section-header h2 { font-size: 14px; font-weight: bold; color: #444; text-transform: uppercase; letter-spacing: 0.5px; }
+    .count { background: #ccc; color: white; font-size: 11px; font-weight: bold; padding: 2px 8px; border-radius: 20px; }
+
+    .deliveries { padding: 0 16px; display: flex; flex-direction: column; gap: 8px; }
+
+    .card-done {
+      background: white;
+      border-radius: 12px;
+      padding: 13px 14px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .done-info { flex: 1; }
+    .done-name { font-size: 15px; font-weight: bold; color: #333; }
+    .done-sub  { font-size: 12px; color: #aaa; margin-top: 3px; }
+
+    .done-actions { display: flex; gap: 6px; }
+
+    .btn-done-wa {
+      background: #f0fdf4; color: #25D366;
+      border: none; border-radius: 8px;
+      padding: 8px 11px; font-size: 15px;
+      cursor: pointer; text-decoration: none;
+      display: flex; align-items: center;
+    }
+
+    .btn-done-delete {
+      background: #fdecea; color: #e74c3c;
+      border: none; border-radius: 8px;
+      padding: 8px 11px; font-size: 15px;
+      cursor: pointer;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 50px 20px;
+      color: #bbb;
+      font-size: 14px;
+    }
+
+    .empty .icon { font-size: 40px; margin-bottom: 10px; }
+
+    .bottom-nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: white;
+      display: flex;
+      border-top: 1px solid #eee;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.08);
+      z-index: 100;
+    }
+
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 0;
+      text-decoration: none;
+      color: #aaa;
+      font-size: 11px;
+      gap: 3px;
+    }
+
+    .nav-item.active { color: #25D366; }
+    .nav-item .icon  { font-size: 22px; }
+
+    .nav-item.center {
+      background: #25D366;
+      color: white;
+      border-radius: 16px 16px 0 0;
+      margin: 0 8px;
+      padding-top: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>📋 Historique</h1>
+  <a class="btn-back" href="dashboard.html">← Retour</a>
+</header>
+
+<div class="search-box">
+  <input id="searchInput" type="text" placeholder="🔍 Rechercher un client..." oninput="renderList()" />
+</div>
+
+<div class="section-header">
+  <h2>Livraisons terminées</h2>
+  <span class="count" id="doneCount">0</span>
+</div>
+
+<div class="deliveries" id="doneList"></div>
+
+<nav class="bottom-nav">
+  <a class="nav-item active" href="dashboard.html">
+    <span class="icon">📊</span>Dashboard
+  </a>
+  <a class="nav-item center" href="courier.html">
+    <span class="icon">➕</span>Livraison
+  </a>
+  <a class="nav-item" href="contacts.html">
+    <span class="icon">👥</span>Contacts
+  </a>
+</nav>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+  firebase.auth().onAuthStateChanged(user => {
+    if (!user) window.location.href = '/login.html';
+  });
+
+  let allDone = [];
+
+  function timeAgo(ts) {
+    if (!ts) return '—';
+    const diff = Date.now() - ts;
+    const m = Math.floor(diff / 60000);
+    const h = Math.floor(m / 60);
+    const day = Math.floor(h / 24);
+    if (m < 1)  return 'à l\'instant';
+    if (m < 60) return `il y a ${m} min`;
+    if (h < 24) return `il y a ${h}h`;
+    if (day < 7) return `il y a ${day}j`;
+    return new Date(ts).toLocaleDateString('fr-FR');
+  }
+
+  function getWaLink(d) {
+    const trackUrl = window.location.origin + '/track.html?id=' + d.id;
+    const msg = encodeURIComponent('Suivez votre livraison en direct 📍 : ' + trackUrl);
+    return d.clientPhone
+      ? `https://wa.me/212${d.clientPhone.replace(/^0/, '')}?text=${msg}`
+      : `https://wa.me/?text=${msg}`;
+  }
+
+  function renderList() {
+    const query = document.getElementById('searchInput').value.trim().toLowerCase();
+    const filtered = allDone.filter(d =>
+      !query ||
+      (d.clientName  || '').toLowerCase().includes(query) ||
+      (d.clientPhone || '').includes(query)
+    );
+
+    document.getElementById('doneCount').textContent = filtered.length;
+
+    const list = document.getElementById('doneList');
+    list.innerHTML = '';
+
+    if (filtered.length === 0) {
+      list.innerHTML = `<div class="empty"><div class="icon">📦</div>${query ? 'Aucun résultat' : 'Aucune livraison terminée'}</div>`;
+      return;
+    }
+
+    filtered.forEach(d => {
+      const card = document.createElement('div');
+      card.className = 'card-done';
+      card.innerHTML = `
+        <div class="done-info">
+          <div class="done-name">${d.clientName || 'Client inconnu'}</div>
+          <div class="done-sub">${d.clientPhone ? d.clientPhone + ' · ' : ''}${timeAgo(d.timestamp)}</div>
+        </div>
+        <div class="done-actions">
+          <a class="btn-done-wa" href="${getWaLink(d)}" target="_blank">📱</a>
+          <button class="btn-done-delete">🗑</button>
+        </div>
+      `;
+      card.querySelector('.btn-done-delete').onclick = () => deleteDelivery(d.id);
+      list.appendChild(card);
+    });
+  }
+
+  function deleteDelivery(id) {
+    if (!confirm('Supprimer ?')) return;
+    db.ref('livraisons/' + id).remove();
+  }
+
+  db.ref('livraisons').on('value', snap => {
+    const data = snap.val() || {};
+    allDone = Object.entries(data)
+      .map(([id, v]) => ({ id, ...v }))
+      .filter(d => !d.active)
+      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    renderList();
+  });
+</script>
+</body>
+</html>

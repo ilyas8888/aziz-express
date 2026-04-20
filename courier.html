@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+  <html lang="fr">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ma Position</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 100vh;
+        margin: 0;
+        background: #f0f0f0;
+        padding: 24px 20px;
+      }
+
+      h2 { margin-bottom: 20px; color: #222; }
+
+      .form-group {
+        width: 100%;
+        max-width: 320px;
+        margin-bottom: 12px;
+      }
+
+      .form-group label {
+        font-size: 12px;
+        color: #888;
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .form-group input,
+      .form-group select {
+        width: 100%;
+        padding: 12px;
+        border-radius: 10px;
+        border: 1px solid #ccc;
+        font-size: 15px;
+        background: white;
+      }
+
+      .divider {
+        width: 100%;
+        max-width: 320px;
+        text-align: center;
+        font-size: 12px;
+        color: #aaa;
+        margin: 4px 0 10px;
+        position: relative;
+      }
+      .divider::before, .divider::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        width: 38%;
+        height: 1px;
+        background: #ddd;
+      }
+      .divider::before { left: 0; }
+      .divider::after  { right: 0; }
+
+      .dest-badge {
+        width: 100%;
+        max-width: 320px;
+        background: #d4f5e0;
+        color: #1a7a40;
+        border-radius: 10px;
+        padding: 10px 14px;
+        font-size: 13px;
+        margin-bottom: 8px;
+        display: none;
+      }
+
+      #destMap {
+        display: none;
+        width: 100%;
+        max-width: 320px;
+        height: 180px;
+        border-radius: 12px;
+        margin-bottom: 12px;
+        border: 2px solid #25D366;
+      }
+
+      button {
+        padding: 16px 40px;
+        font-size: 17px;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        margin: 8px 0;
+        width: 280px;
+      }
+
+      #btnStart { background: #25D366; color: white; }
+      #btnStop  { background: #e74c3c; color: white; display: none; }
+      #status   { margin-top: 16px; font-size: 14px; color: #555; text-align: center; max-width: 300px; }
+
+      #linkBox {
+        display: none;
+        margin-top: 20px;
+        text-align: center;
+        width: 100%;
+        max-width: 320px;
+      }
+
+      #trackLink {
+        width: 90%; padding: 10px;
+        border-radius: 8px; border: 1px solid #ccc; font-size: 12px;
+      }
+
+      #btnWhatsapp {
+        background: #25D366; color: white;
+        padding: 12px 25px; border: none;
+        border-radius: 10px; font-size: 15px;
+        cursor: pointer; margin-top: 10px; width: 280px;
+      }
+
+      .nav-links {
+        display: flex;
+        gap: 20px;
+        margin-top: 28px;
+      }
+
+      .nav-links a {
+        font-size: 13px;
+        color: #25D366;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+
+    <h2>🛵 Livraison Express Oujda</h2>
+
+    <!-- Sélection contact existant -->
+    <div class="form-group">
+      <label>Client enregistré</label>
+      <select id="contactSelect" onchange="onContactSelect()">
+        <option value="">— Choisir un contact —</option>
+      </select>
+    </div>
+
+    <div class="divider">ou saisir manuellement</div>
+
+    <!-- Saisie manuelle -->
+    <div class="form-group">
+      <label>Nom du client</label>
+      <input id="clientName" type="text" placeholder="Ex: Mohammed Alami" />
+    </div>
+    <div class="form-group">
+      <label>Téléphone</label>
+      <input id="clientPhone" type="tel" placeholder="Ex: 0612345678" />
+    </div>
+
+    <!-- Badge + carte destination -->
+    <div class="dest-badge" id="destBadge">🏠 Destination : <span id="destLabel"></span></div>
+    <div id="destMap"></div>
+
+    <button id="btnStart" onclick="startTracking()">Démarrer la livraison</button>
+    <button id="btnStop"  onclick="stopTracking()">Arrêter</button>
+    <p id="status">En attente...</p>
+
+    <div id="linkBox">
+      <p style="font-size:13px; color:#555;">Envoyez ce lien au client :</p>
+      <input id="trackLink" readonly />
+      <br>
+      <button id="btnWhatsapp">Envoyer via WhatsApp</button>
+    </div>
+
+    <div class="nav-links">
+      <a href="dashboard.html">← Dashboard</a>
+      <a href="contacts.html">👥 Contacts</a>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script>
+      firebase.auth().onAuthStateChanged(user => {
+        if (!user) window.location.href = '/login.html';
+      });
+
+      let watchId = null;
+      let destLat  = null;
+      let destLng  = null;
+      const deliveryId = "livraison_" + Date.now();
+
+      // Charger les contacts dans le dropdown
+      window.addEventListener('load', () => {
+        db.ref('contacts').on('value', snap => {
+          const data = snap.val() || {};
+          const select = document.getElementById('contactSelect');
+          select.innerHTML = '<option value="">— Choisir un contact —</option>';
+          Object.entries(data)
+            .map(([id, v]) => ({ id, ...v }))
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .forEach(c => {
+              const opt = document.createElement('option');
+              opt.value = JSON.stringify(c);
+              opt.textContent = c.name + (c.phone ? ` — ${c.phone}` : '');
+              select.appendChild(opt);
+            });
+        });
+      });
+
+      let destMap = null;
+      let destMarker = null;
+
+      function onContactSelect() {
+        const val = document.getElementById('contactSelect').value;
+        if (!val) {
+          destLat = null; destLng = null;
+          document.getElementById('destBadge').style.display = 'none';
+          document.getElementById('destMap').style.display   = 'none';
+          return;
+        }
+        const c = JSON.parse(val);
+        document.getElementById('clientName').value  = c.name  || '';
+        document.getElementById('clientPhone').value = c.phone || '';
+
+        if (c.lat && c.lng) {
+          destLat = c.lat;
+          destLng = c.lng;
+          document.getElementById('destLabel').textContent   = c.name;
+          document.getElementById('destBadge').style.display = 'block';
+          document.getElementById('destMap').style.display   = 'block';
+
+          setTimeout(() => {
+            if (!destMap) {
+              destMap = L.map('destMap').setView([c.lat, c.lng], 15);
+              L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(destMap);
+            }
+            destMap.invalidateSize();
+            if (destMarker) destMap.removeLayer(destMarker);
+            destMarker = L.marker([c.lat, c.lng])
+              .addTo(destMap)
+              .bindPopup(`🏠 ${c.name}`)
+              .openPopup();
+
+            // Position livreur en temps réel
+            const courierIcon = L.divIcon({
+              html: '<div style="font-size:24px">🛵</div>',
+              iconSize: [30, 30], className: ''
+            });
+            let courierMarker = null;
+            let routeLine = null;
+            let firstFit = true;
+
+            function drawRoute(from, to) {
+              const url = `https://router.project-osrm.org/route/v1/driving/${from[1]},${from[0]};${to[1]},${to[0]}?overview=full&geometries=geojson`;
+              fetch(url)
+                .then(r => r.json())
+                .then(data => {
+                  if (!data.routes || !data.routes[0]) return;
+                  const coords = data.routes[0].geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+                  if (routeLine) destMap.removeLayer(routeLine);
+                  routeLine = L.polyline(coords, { color: '#25D366', weight: 4, opacity: 0.8 }).addTo(destMap);
+                })
+                .catch(() => {
+                  // Fallback : ligne droite
+                  if (routeLine) destMap.removeLayer(routeLine);
+                  routeLine = L.polyline([from, to], { color: '#25D366', weight: 3, dashArray: '6,8' }).addTo(destMap);
+                });
+            }
+
+            if (navigator.geolocation) {
+              navigator.geolocation.watchPosition(pos => {
+                const courierLatLng = [pos.coords.latitude, pos.coords.longitude];
+                if (!courierMarker) {
+                  courierMarker = L.marker(courierLatLng, { icon: courierIcon })
+                    .addTo(destMap)
+                    .bindPopup('📍 Ma position');
+                } else {
+                  courierMarker.setLatLng(courierLatLng);
+                }
+                drawRoute(courierLatLng, [c.lat, c.lng]);
+                if (firstFit) {
+                  const bounds = L.latLngBounds([[c.lat, c.lng], courierLatLng]);
+                  destMap.fitBounds(bounds, { padding: [30, 30] });
+                  firstFit = false;
+                }
+              }, null, { enableHighAccuracy: true, maximumAge: 3000 });
+            } else {
+              destMap.setView([c.lat, c.lng], 15);
+            }
+          }, 100);
+        } else {
+          destLat = null; destLng = null;
+          document.getElementById('destBadge').style.display = 'none';
+          document.getElementById('destMap').style.display   = 'none';
+        }
+      }
+
+      function startTracking() {
+        if (!navigator.geolocation) {
+          document.getElementById("status").textContent = "GPS non supporté";
+          return;
+        }
+
+        const clientName  = document.getElementById("clientName").value.trim() || "Client";
+        const clientPhone = document.getElementById("clientPhone").value.trim();
+
+        document.getElementById("btnStart").style.display        = "none";
+        document.getElementById("btnStop").style.display         = "block";
+        document.getElementById("clientName").disabled           = true;
+        document.getElementById("clientPhone").disabled          = true;
+        document.getElementById("contactSelect").disabled        = true;
+        document.getElementById("status").textContent            = "GPS actif...";
+
+        const trackUrl = window.location.origin + '/track.html?id=' + deliveryId;
+
+        document.getElementById("trackLink").value = trackUrl;
+        document.getElementById("linkBox").style.display = "block";
+
+        const waTarget = clientPhone
+          ? `https://wa.me/212${clientPhone.replace(/^0/, "")}?text=`
+          : "https://wa.me/?text=";
+
+        document.getElementById("btnWhatsapp").onclick = () => {
+          window.open(waTarget + encodeURIComponent("Suivez votre livraison en direct 📍 : " + trackUrl));
+        };
+
+        const deliveryData = {
+          active: true,
+          clientName,
+          clientPhone,
+          timestamp: Date.now()
+        };
+        if (destLat && destLng) {
+          deliveryData.destLat = destLat;
+          deliveryData.destLng = destLng;
+        }
+        db.ref("livraisons/" + deliveryId).update(deliveryData);
+
+        // Auto-enregistrer le client dans contacts s'il n'existe pas encore
+        const selectedVal = document.getElementById('contactSelect').value;
+        if (!selectedVal && clientName !== "Client") {
+          db.ref('contacts').orderByChild('phone').equalTo(clientPhone || '').once('value', snap => {
+            if (!snap.exists()) {
+              db.ref('contacts').push({
+                name: clientName,
+                phone: clientPhone,
+                lat: destLat,
+                lng: destLng,
+                updatedAt: Date.now()
+              });
+            }
+          });
+        }
+
+        watchId = navigator.geolocation.watchPosition(
+          pos => {
+            const { latitude, longitude } = pos.coords;
+            db.ref("livraisons/" + deliveryId).update({
+              lat: latitude, lng: longitude, timestamp: Date.now()
+            });
+            document.getElementById("status").textContent =
+              `Position envoyée : ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+          },
+          err => {
+            document.getElementById("status").textContent = "Erreur GPS : " + err.message;
+          },
+          { enableHighAccuracy: true, maximumAge: 3000 }
+        );
+      }
+
+      function stopTracking() {
+        if (watchId) navigator.geolocation.clearWatch(watchId);
+        db.ref("livraisons/" + deliveryId).update({ active: false });
+        document.getElementById("btnStart").style.display = "block";
+        document.getElementById("btnStop").style.display  = "none";
+        document.getElementById("status").textContent     = "Livraison terminée.";
+      }
+    </script>
+  </body>
+  </html>
