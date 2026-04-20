@@ -240,6 +240,87 @@
     }
 
     .empty .icon { font-size: 40px; margin-bottom: 10px; }
+
+    /* MODAL FRAIS */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal-box {
+      background: white;
+      border-radius: 24px 24px 0 0;
+      padding: 24px 20px 36px;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .modal-title {
+      font-size: 16px; font-weight: 700;
+      color: #0F172A; margin-bottom: 4px;
+    }
+    .modal-sub {
+      font-size: 12px; color: #94a3b8;
+      margin-bottom: 20px;
+    }
+
+    .modal-field { margin-bottom: 12px; }
+    .modal-field label {
+      font-size: 12px; font-weight: 500;
+      color: #64748b; display: block; margin-bottom: 4px;
+    }
+    .modal-field input {
+      width: 100%; padding: 11px 14px;
+      border-radius: 10px; border: 1.5px solid #e2e8f0;
+      font-size: 15px; font-family: 'Poppins', sans-serif;
+      outline: none;
+    }
+    .modal-field input:focus { border-color: #FF5A1F; }
+
+    .frais-summary {
+      background: #FFF5F0;
+      border-radius: 12px;
+      padding: 14px;
+      margin: 16px 0;
+      display: none;
+    }
+    .frais-row {
+      display: flex; justify-content: space-between;
+      font-size: 13px; color: #64748b;
+      margin-bottom: 6px;
+    }
+    .frais-row.total {
+      font-size: 15px; font-weight: 700;
+      color: #FF5A1F; margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid #ffd4c0;
+      margin-bottom: 0;
+    }
+
+    .modal-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 4px;
+    }
+    .btn-modal-skip {
+      background: white; color: #64748b;
+      border: 1.5px solid #e2e8f0; border-radius: 12px;
+      padding: 13px; font-size: 14px; font-weight: 600;
+      font-family: 'Poppins', sans-serif; cursor: pointer;
+    }
+    .btn-modal-confirm {
+      background: #0F172A; color: white;
+      border: none; border-radius: 12px;
+      padding: 13px; font-size: 14px; font-weight: 600;
+      font-family: 'Poppins', sans-serif; cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -298,6 +379,38 @@
     <span class="icon">👥</span>Contacts
   </a>
 </nav>
+
+<!-- MODAL FRAIS -->
+<div class="modal-overlay" id="fraisModal">
+  <div class="modal-box">
+    <div class="modal-title">💰 Frais de livraison</div>
+    <div class="modal-sub">Optionnel — laissez vide si non applicable</div>
+
+    <div class="modal-field">
+      <label>Prix article (DH)</label>
+      <input id="fPrix" type="number" placeholder="Ex: 150" oninput="calcFrais()" />
+    </div>
+    <div class="modal-field">
+      <label>Remise commerçant (%)</label>
+      <input id="fRemise" type="number" placeholder="Ex: 20" min="0" max="100" oninput="calcFrais()" />
+    </div>
+    <div class="modal-field">
+      <label>Frais livraison payés par client (DH)</label>
+      <input id="fLivraison" type="number" placeholder="Ex: 50" oninput="calcFrais()" />
+    </div>
+
+    <div class="frais-summary" id="fraisSummary">
+      <div class="frais-row"><span>Coût article net</span><span id="fCout">—</span></div>
+      <div class="frais-row"><span>Frais livraison</span><span id="fFrais">—</span></div>
+      <div class="frais-row total"><span>Bénéfice net</span><span id="fBenef">—</span></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-modal-skip" onclick="skipFrais()">Passer</button>
+      <button class="btn-modal-confirm" onclick="confirmFrais()">✓ Terminer</button>
+    </div>
+  </div>
+</div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -386,8 +499,61 @@
     });
   }
 
+  let _finishId = null;
+
   function finishDelivery(id) {
-    db.ref('livraisons/' + id).update({ active: false });
+    _finishId = id;
+    document.getElementById('fPrix').value      = '';
+    document.getElementById('fRemise').value    = '';
+    document.getElementById('fLivraison').value = '';
+    document.getElementById('fraisSummary').style.display = 'none';
+    document.getElementById('fraisModal').classList.add('open');
+  }
+
+  function calcFrais() {
+    const prix      = parseFloat(document.getElementById('fPrix').value)      || 0;
+    const remise    = parseFloat(document.getElementById('fRemise').value)    || 0;
+    const livraison = parseFloat(document.getElementById('fLivraison').value) || 0;
+
+    if (!prix && !livraison) {
+      document.getElementById('fraisSummary').style.display = 'none';
+      return;
+    }
+
+    const coutNet = prix * (1 - remise / 100);
+    const benef   = (prix - coutNet) + livraison;
+
+    document.getElementById('fCout').textContent  = prix ? `${coutNet.toFixed(0)} DH` : '—';
+    document.getElementById('fFrais').textContent = livraison ? `${livraison.toFixed(0)} DH` : '—';
+    document.getElementById('fBenef').textContent = `${benef.toFixed(0)} DH`;
+    document.getElementById('fraisSummary').style.display = 'block';
+  }
+
+  function skipFrais() {
+    document.getElementById('fraisModal').classList.remove('open');
+    db.ref('livraisons/' + _finishId).update({ active: false });
+    _finishId = null;
+  }
+
+  function confirmFrais() {
+    const prix      = parseFloat(document.getElementById('fPrix').value)      || null;
+    const remise    = parseFloat(document.getElementById('fRemise').value)    || null;
+    const livraison = parseFloat(document.getElementById('fLivraison').value) || null;
+
+    const update = { active: false };
+    if (prix)      update.prixArticle = prix;
+    if (remise)    update.remise      = remise;
+    if (livraison) update.fraisClient = livraison;
+    if (prix && remise !== null) {
+      update.coutNet = prix * (1 - (remise || 0) / 100);
+      update.benefice = ((prix - update.coutNet) + (livraison || 0));
+    } else if (livraison) {
+      update.benefice = livraison;
+    }
+
+    document.getElementById('fraisModal').classList.remove('open');
+    db.ref('livraisons/' + _finishId).update(update);
+    _finishId = null;
   }
 
   function deleteDelivery(id) {
