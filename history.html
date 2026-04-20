@@ -37,26 +37,49 @@
       text-decoration: none;
     }
 
-    .search-box {
-      padding: 14px 16px 0;
+    /* RÉSUMÉ FINANCIER */
+    .finance-summary {
+      margin: 14px 16px 0;
+      background: #0F172A;
+      border-radius: 16px;
+      padding: 16px;
+      color: white;
     }
 
+    .finance-summary .title {
+      font-size: 11px; font-weight: 600;
+      opacity: 0.5; text-transform: uppercase;
+      letter-spacing: 0.5px; margin-bottom: 12px;
+    }
+
+    .finance-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .finance-item { }
+    .finance-item .val {
+      font-size: 22px; font-weight: 700;
+      color: #FF8C42;
+    }
+    .finance-item .lbl {
+      font-size: 11px; opacity: 0.5;
+      margin-top: 2px;
+    }
+
+    .search-box { padding: 14px 16px 0; }
     .search-box input {
-      width: 100%;
-      padding: 11px 14px;
-      border-radius: 12px;
-      border: 1px solid #ddd;
-      font-size: 14px;
-      background: white;
+      width: 100%; padding: 11px 14px;
+      border-radius: 12px; border: 1px solid #ddd;
+      font-size: 14px; background: white;
     }
 
     .section-header {
-      display: flex;
-      align-items: center;
+      display: flex; align-items: center;
       justify-content: space-between;
       padding: 14px 16px 8px;
     }
-
     .section-header h2 { font-size: 14px; font-weight: bold; color: #444; text-transform: uppercase; letter-spacing: 0.5px; }
     .count { background: #ccc; color: white; font-size: 11px; font-weight: bold; padding: 2px 8px; border-radius: 20px; }
 
@@ -64,9 +87,12 @@
 
     .card-done {
       background: white;
-      border-radius: 12px;
-      padding: 13px 14px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      border-radius: 14px;
+      padding: 14px 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+
+    .card-done-top {
       display: flex;
       align-items: center;
       gap: 12px;
@@ -74,7 +100,7 @@
 
     .done-info { flex: 1; }
     .done-name { font-size: 15px; font-weight: bold; color: #333; }
-    .done-sub  { font-size: 12px; color: #aaa; margin-top: 3px; }
+    .done-sub  { font-size: 12px; color: #aaa; margin-top: 2px; }
 
     .done-actions { display: flex; gap: 6px; }
 
@@ -93,13 +119,40 @@
       cursor: pointer;
     }
 
+    /* FRAIS DETAILS */
+    .frais-details {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #f1f5f9;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .frais-badge {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 5px 10px;
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    .benef-badge {
+      background: #ecfdf5;
+      border-radius: 8px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #059669;
+      margin-left: auto;
+    }
+
     .empty {
       text-align: center;
       padding: 50px 20px;
       color: #bbb;
       font-size: 14px;
     }
-
     .empty .icon { font-size: 40px; margin-bottom: 10px; }
 
     .bottom-nav {
@@ -113,27 +166,17 @@
     }
 
     .nav-item {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 10px 0;
-      text-decoration: none;
-      color: #aaa;
-      font-size: 11px;
-      gap: 3px;
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 10px 0; text-decoration: none;
+      color: #aaa; font-size: 11px; gap: 3px;
     }
-
     .nav-item.active { color: #FF5A1F; }
     .nav-item .icon  { font-size: 22px; }
-
     .nav-item.center {
-      background: #0F172A;
-      color: white;
+      background: #0F172A; color: white;
       border-radius: 16px 16px 0 0;
-      margin: 0 8px;
-      padding-top: 8px;
+      margin: 0 8px; padding-top: 8px;
     }
   </style>
 </head>
@@ -143,6 +186,20 @@
   <h1>📋 Historique</h1>
   <a class="btn-back" href="dashboard.html">← Retour</a>
 </header>
+
+<div class="finance-summary">
+  <div class="title">💰 Bénéfices</div>
+  <div class="finance-grid">
+    <div class="finance-item">
+      <div class="val" id="benefAujourdhui">— DH</div>
+      <div class="lbl">Aujourd'hui</div>
+    </div>
+    <div class="finance-item">
+      <div class="val" id="benefTotal">— DH</div>
+      <div class="lbl">Total</div>
+    </div>
+  </div>
+</div>
 
 <div class="search-box">
   <input id="searchInput" type="text" placeholder="🔍 Rechercher un client..." oninput="renderList()" />
@@ -156,7 +213,7 @@
 <div class="deliveries" id="doneList"></div>
 
 <nav class="bottom-nav">
-  <a class="nav-item active" href="dashboard.html">
+  <a class="nav-item" href="dashboard.html">
     <span class="icon">📊</span>Dashboard
   </a>
   <a class="nav-item center" href="courier.html">
@@ -180,11 +237,15 @@
 
   let allDone = [];
 
+  function isToday(ts) {
+    return ts && new Date(ts).toDateString() === new Date().toDateString();
+  }
+
   function timeAgo(ts) {
     if (!ts) return '—';
     const diff = Date.now() - ts;
-    const m = Math.floor(diff / 60000);
-    const h = Math.floor(m / 60);
+    const m   = Math.floor(diff / 60000);
+    const h   = Math.floor(m / 60);
     const day = Math.floor(h / 24);
     if (m < 1)  return 'à l\'instant';
     if (m < 60) return `il y a ${m} min`;
@@ -211,6 +272,19 @@
 
     document.getElementById('doneCount').textContent = filtered.length;
 
+    // Calcul bénéfices
+    const benefToday = allDone
+      .filter(d => isToday(d.timestamp) && d.benefice)
+      .reduce((s, d) => s + d.benefice, 0);
+    const benefTotal = allDone
+      .filter(d => d.benefice)
+      .reduce((s, d) => s + d.benefice, 0);
+
+    document.getElementById('benefAujourdhui').textContent =
+      benefToday > 0 ? `${benefToday.toFixed(0)} DH` : '— DH';
+    document.getElementById('benefTotal').textContent =
+      benefTotal > 0 ? `${benefTotal.toFixed(0)} DH` : '— DH';
+
     const list = document.getElementById('doneList');
     list.innerHTML = '';
 
@@ -222,15 +296,29 @@
     filtered.forEach(d => {
       const card = document.createElement('div');
       card.className = 'card-done';
+
+      let fraisHtml = '';
+      if (d.prixArticle || d.fraisClient || d.benefice) {
+        fraisHtml = `<div class="frais-details">`;
+        if (d.prixArticle) fraisHtml += `<span class="frais-badge">🛒 ${d.prixArticle} DH</span>`;
+        if (d.remise)      fraisHtml += `<span class="frais-badge">🏷 -${d.remise}%</span>`;
+        if (d.fraisClient) fraisHtml += `<span class="frais-badge">🚚 ${d.fraisClient} DH</span>`;
+        if (d.benefice)    fraisHtml += `<span class="benef-badge">+${d.benefice.toFixed(0)} DH</span>`;
+        fraisHtml += `</div>`;
+      }
+
       card.innerHTML = `
-        <div class="done-info">
-          <div class="done-name">${d.clientName || 'Client inconnu'}</div>
-          <div class="done-sub">${d.clientPhone ? d.clientPhone + ' · ' : ''}${timeAgo(d.timestamp)}</div>
+        <div class="card-done-top">
+          <div class="done-info">
+            <div class="done-name">${d.clientName || 'Client inconnu'}</div>
+            <div class="done-sub">${d.clientPhone ? d.clientPhone + ' · ' : ''}${timeAgo(d.timestamp)}</div>
+          </div>
+          <div class="done-actions">
+            <a class="btn-done-wa" href="${getWaLink(d)}" target="_blank">📱</a>
+            <button class="btn-done-delete">🗑</button>
+          </div>
         </div>
-        <div class="done-actions">
-          <a class="btn-done-wa" href="${getWaLink(d)}" target="_blank">📱</a>
-          <button class="btn-done-delete">🗑</button>
-        </div>
+        ${fraisHtml}
       `;
       card.querySelector('.btn-done-delete').onclick = () => deleteDelivery(d.id);
       list.appendChild(card);
