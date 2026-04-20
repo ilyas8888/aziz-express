@@ -251,7 +251,6 @@
   let selectedLat = null;
   let selectedLng = null;
   let marker = null;
-  let pendingDemandeId = null;
 
   const map = L.map('map').setView(OUJDA, 13);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
@@ -296,20 +295,9 @@ ${details ? `📦 *Détails :* ${details}` : ''}
 
 _Envoyé depuis aziz-express_`;
 
-    // Sauvegarder dans Firebase
-    const ref = db.ref('demandes').push({
-      clientName:  name,
-      clientPhone: phone,
-      details:     details,
-      lat:         selectedLat,
-      lng:         selectedLng,
-      timestamp:   Date.now(),
-      status:      'pending'
-    });
-    pendingDemandeId = ref.key;
-
     const waUrl = `https://wa.me/${AZIZ_PHONE}?text=${encodeURIComponent(msg)}`;
     window._lastWaUrl = waUrl;
+    window._pendingData = { name, phone, details, lat: selectedLat, lng: selectedLng };
     window.open(waUrl, '_blank');
 
     document.getElementById('formSection').style.display    = 'none';
@@ -317,6 +305,16 @@ _Envoyé depuis aziz-express_`;
   }
 
   function confirmSent() {
+    const d = window._pendingData;
+    db.ref('demandes').push({
+      clientName:  d.name,
+      clientPhone: d.phone,
+      details:     d.details,
+      lat:         d.lat,
+      lng:         d.lng,
+      timestamp:   Date.now(),
+      status:      'pending'
+    });
     document.getElementById('confirmSection').style.display = 'none';
     document.getElementById('successSection').style.display = 'block';
   }
@@ -326,11 +324,6 @@ _Envoyé depuis aziz-express_`;
   }
 
   function goBack() {
-    // Supprimer la demande si l'utilisateur revient en arrière
-    if (pendingDemandeId) {
-      db.ref('demandes/' + pendingDemandeId).remove();
-      pendingDemandeId = null;
-    }
     document.getElementById('confirmSection').style.display = 'none';
     document.getElementById('formSection').style.display    = 'block';
   }
