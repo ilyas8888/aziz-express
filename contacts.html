@@ -104,6 +104,12 @@
     <a href="dashboard.html">← Dashboard</a>
   </header>
 
+  <div style="padding: 12px 16px 0;">
+    <input id="searchInput" type="text" placeholder="🔍 Rechercher un client..."
+      oninput="renderContacts()"
+      style="width:100%; padding:11px 14px; border-radius:12px; border:1px solid #ddd; font-size:14px; background:white;" />
+  </div>
+
   <div class="contacts" id="contactsList"></div>
 
   <button class="fab" onclick="openModal()">+ Nouveau client</button>
@@ -138,7 +144,7 @@
   <script src="firebase-config.js"></script>
   <script>
     firebase.auth().onAuthStateChanged(user => {
-      if (!user) window.location.href = '/login.html';
+      if (!user) window.location.href = 'login.html';
     });
 
     let map = null;
@@ -232,13 +238,20 @@
     }
 
     function renderContacts() {
+      const query = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
+      const filtered = contacts.filter(c =>
+        !query ||
+        (c.name  || '').toLowerCase().includes(query) ||
+        (c.phone || '').includes(query)
+      );
+
       const list = document.getElementById('contactsList');
-      if (contacts.length === 0) {
-        list.innerHTML = `<div class="empty"><div class="icon">👥</div>Aucun client enregistré</div>`;
+      if (filtered.length === 0) {
+        list.innerHTML = `<div class="empty"><div class="icon">👥</div>${query ? 'Aucun résultat' : 'Aucun client enregistré'}</div>`;
         return;
       }
       list.innerHTML = '';
-      contacts.forEach(c => {
+      filtered.forEach(c => {
         const card = document.createElement('div');
         card.className = 'contact-card';
         card.innerHTML = `

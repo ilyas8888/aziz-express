@@ -172,7 +172,7 @@
 <script src="firebase-config.js"></script>
 <script>
   firebase.auth().onAuthStateChanged(user => {
-    if (!user) window.location.href = '/login.html';
+    if (!user) window.location.href = 'login.html';
   });
 
   let allDone = [];
@@ -191,7 +191,7 @@
   }
 
   function getWaLink(d) {
-    const trackUrl = window.location.origin + '/track.html?id=' + d.id;
+    const trackUrl = window.location.href.replace(/[^/]*$/, '') + 'track.html?id=' + d.id;
     const msg = encodeURIComponent('Suivez votre livraison en direct 📍 : ' + trackUrl);
     return d.clientPhone
       ? `https://wa.me/212${d.clientPhone.replace(/^0/, '')}?text=${msg}`

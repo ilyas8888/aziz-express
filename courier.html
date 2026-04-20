@@ -182,7 +182,7 @@
     <script src="firebase-config.js"></script>
     <script>
       firebase.auth().onAuthStateChanged(user => {
-        if (!user) window.location.href = '/login.html';
+        if (!user) window.location.href = 'login.html';
       });
 
       let watchId = null;
@@ -312,7 +312,7 @@
         document.getElementById("contactSelect").disabled        = true;
         document.getElementById("status").textContent            = "GPS actif...";
 
-        const trackUrl = window.location.origin + '/track.html?id=' + deliveryId;
+        const trackUrl = window.location.href.replace(/[^/]*$/, '') + 'track.html?id=' + deliveryId;
 
         document.getElementById("trackLink").value = trackUrl;
         document.getElementById("linkBox").style.display = "block";
