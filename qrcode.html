@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <title>QR Code — Aziz Express</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #FFF5F0;
+      min-height: 100vh;
+      padding-bottom: 40px;
+    }
+
+    header {
+      background: #0F172A;
+      color: white;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+    header h1 { font-size: 18px; }
+    .btn-back {
+      background: rgba(255,255,255,0.15);
+      border: none; color: white;
+      padding: 6px 12px; border-radius: 8px;
+      cursor: pointer; font-size: 13px;
+      text-decoration: none;
+    }
+
+    .page {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 32px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 28px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 20px;
+      padding: 32px 28px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #0F172A;
+      text-align: center;
+    }
+
+    .qr-frame {
+      background: white;
+      border: 3px solid #FF5A1F;
+      border-radius: 16px;
+      padding: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #qr-canvas { display: block; }
+
+    .url-label {
+      font-size: 12px;
+      color: #64748b;
+      text-align: center;
+      word-break: break-all;
+    }
+
+    .instructions {
+      background: #FFF5F0;
+      border-left: 4px solid #FF5A1F;
+      border-radius: 10px;
+      padding: 16px;
+      width: 100%;
+    }
+    .instructions p {
+      font-size: 13px;
+      color: #0F172A;
+      line-height: 1.7;
+    }
+    .instructions strong { color: #FF5A1F; }
+
+    .btn-print {
+      background: linear-gradient(135deg, #FF5A1F, #FF8C42);
+      color: white;
+      border: none;
+      padding: 14px 32px;
+      border-radius: 12px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      box-shadow: 0 4px 14px rgba(255,90,31,0.35);
+      transition: opacity 0.2s;
+    }
+    .btn-print:hover { opacity: 0.9; }
+
+    /* Auth guard */
+    #guard {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #FFF5F0;
+    }
+    #guard p {
+      font-family: 'Poppins', sans-serif;
+      color: #64748b;
+      font-size: 14px;
+    }
+
+    /* Print styles */
+    @media print {
+      header, .instructions, .btn-print, .url-label { display: none !important; }
+      body { background: white; }
+      .page { padding: 0; margin: 0; }
+      .card {
+        box-shadow: none;
+        border: none;
+        padding: 0;
+      }
+      .qr-frame { border-color: #FF5A1F; }
+      .card-title { display: block !important; font-size: 18px; margin-bottom: 8px; }
+      .print-footer {
+        display: block !important;
+        text-align: center;
+        font-size: 13px;
+        color: #0F172A;
+        margin-top: 12px;
+      }
+    }
+    .print-footer { display: none; }
+  </style>
+</head>
+<body>
+
+<div id="guard"><p>Vérification...</p></div>
+
+<div id="app" style="display:none">
+  <header>
+    <h1>🔗 QR Code commande</h1>
+    <a href="dashboard.html" class="btn-back">← Dashboard</a>
+  </header>
+
+  <div class="page">
+    <div class="card">
+      <div class="card-title">Scannez pour commander chez Aziz Express</div>
+
+      <div class="qr-frame">
+        <div id="qr-canvas"></div>
+      </div>
+
+      <div class="url-label" id="order-url"></div>
+
+      <div class="print-footer">
+        Scannez ce QR code pour passer une commande — Aziz Express
+      </div>
+    </div>
+
+    <div class="instructions">
+      <p>
+        <strong>Comment utiliser :</strong><br>
+        Imprimez cette page et collez-la chez vos commerçants partenaires.<br>
+        Le client scanne le QR code avec son téléphone, remplit le formulaire et confirme via WhatsApp.<br>
+        La commande arrive directement dans votre <strong>Dashboard</strong>.
+      </p>
+    </div>
+
+    <button class="btn-print" onclick="window.print()">🖨️ Imprimer le QR Code</button>
+  </div>
+</div>
+
+<script src="firebase-config.js"></script>
+<script>
+  const BASE = (() => {
+    const p = location.pathname;
+    const i = p.lastIndexOf('/');
+    const dir = p.substring(0, i + 1);
+    return location.origin + dir;
+  })();
+
+  const orderURL = BASE + 'order.html';
+
+  firebase.auth().onAuthStateChanged(user => {
+    if (!user) {
+      document.getElementById('guard').innerHTML = '<p>Accès réservé. <a href="login.html">Se connecter</a></p>';
+      return;
+    }
+    document.getElementById('guard').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('order-url').textContent = orderURL;
+
+    new QRCode(document.getElementById('qr-canvas'), {
+      text: orderURL,
+      width: 220,
+      height: 220,
+      colorDark: '#0F172A',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.H
+    });
+  });
+</script>
+</body>
+</html>
