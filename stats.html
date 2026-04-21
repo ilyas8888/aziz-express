@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <title>Stats — Aziz Express</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #FFF5F0;
+      min-height: 100vh;
+      padding-bottom: 80px;
+    }
+
+    header {
+      background: #0F172A;
+      color: white;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+    header h1 { font-size: 18px; }
+    .btn-back {
+      background: rgba(255,255,255,0.15);
+      border: none; color: white;
+      padding: 6px 12px; border-radius: 8px;
+      cursor: pointer; font-size: 13px;
+      text-decoration: none;
+    }
+
+    /* PÉRIODE TABS */
+    .tabs {
+      display: flex;
+      gap: 8px;
+      padding: 16px 16px 0;
+    }
+    .tab {
+      flex: 1;
+      padding: 8px;
+      border-radius: 10px;
+      border: none;
+      font-family: 'Poppins', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      background: white;
+      color: #64748b;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab.active {
+      background: #0F172A;
+      color: white;
+    }
+
+    /* KPI CARDS */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 14px 16px 0;
+    }
+
+    .kpi {
+      background: white;
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .kpi.accent {
+      background: #0F172A;
+      color: white;
+    }
+    .kpi .val {
+      font-size: 24px;
+      font-weight: 700;
+      color: #FF8C42;
+      line-height: 1.1;
+    }
+    .kpi.accent .val { color: #FF8C42; }
+    .kpi .lbl {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+    .kpi.accent .lbl { color: rgba(255,255,255,0.5); }
+    .kpi .sub {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 2px;
+      font-weight: 500;
+    }
+
+    /* CHART CARDS */
+    .chart-card {
+      background: white;
+      border-radius: 16px;
+      padding: 18px;
+      margin: 14px 16px 0;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .chart-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #0F172A;
+      margin-bottom: 14px;
+    }
+    .chart-wrap {
+      position: relative;
+      height: 180px;
+    }
+
+    /* TOP CLIENTS */
+    .top-list {
+      margin: 14px 16px 0;
+      background: white;
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .top-list-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #0F172A;
+      margin-bottom: 12px;
+    }
+    .top-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .top-item:last-child { border-bottom: none; }
+    .top-rank {
+      width: 26px; height: 26px;
+      background: #FFF5F0;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; color: #FF5A1F;
+      flex-shrink: 0;
+    }
+    .top-name { flex: 1; font-size: 13px; font-weight: 500; color: #0F172A; }
+    .top-count { font-size: 12px; color: #94a3b8; }
+    .top-benef { font-size: 13px; font-weight: 700; color: #059669; }
+
+    .empty-state {
+      text-align: center;
+      padding: 30px;
+      color: #94a3b8;
+      font-size: 13px;
+    }
+
+    /* NAV */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: white;
+      display: flex;
+      border-top: 1px solid #eee;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.08);
+      z-index: 100;
+    }
+    .nav-item {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 10px 0; text-decoration: none;
+      color: #aaa; font-size: 11px; gap: 3px;
+    }
+    .nav-item.active { color: #FF5A1F; }
+    .nav-item .icon { font-size: 22px; }
+    .nav-item.center {
+      background: #0F172A; color: white;
+      border-radius: 16px 16px 0 0;
+      margin: 0 8px; padding-top: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>📈 Statistiques</h1>
+  <a href="dashboard.html" class="btn-back">← Dashboard</a>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="setPeriod(7, this)">7 jours</button>
+  <button class="tab" onclick="setPeriod(30, this)">30 jours</button>
+  <button class="tab" onclick="setPeriod(0, this)">Tout</button>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi accent">
+    <div class="val" id="kpiTotal">—</div>
+    <div class="lbl">Bénéfice total</div>
+  </div>
+  <div class="kpi">
+    <div class="val" id="kpiCount">—</div>
+    <div class="lbl">Livraisons</div>
+  </div>
+  <div class="kpi">
+    <div class="val" id="kpiMoy">—</div>
+    <div class="lbl">Bénéfice moyen</div>
+  </div>
+  <div class="kpi">
+    <div class="val" id="kpiMeilleur">—</div>
+    <div class="lbl">Meilleur jour</div>
+    <div class="sub" id="kpiMeilleurDate"></div>
+  </div>
+</div>
+
+<div class="chart-card">
+  <div class="chart-title">💰 Bénéfice par jour (DH)</div>
+  <div class="chart-wrap">
+    <canvas id="chartBenef"></canvas>
+  </div>
+</div>
+
+<div class="chart-card">
+  <div class="chart-title">📦 Livraisons par jour</div>
+  <div class="chart-wrap">
+    <canvas id="chartCount"></canvas>
+  </div>
+</div>
+
+<div class="top-list">
+  <div class="top-list-title">🏆 Meilleurs clients</div>
+  <div id="topClients"><div class="empty-state">Chargement...</div></div>
+</div>
+
+<nav class="bottom-nav">
+  <a class="nav-item" href="dashboard.html">
+    <span class="icon">📊</span>Dashboard
+  </a>
+  <a class="nav-item center" href="courier.html">
+    <span class="icon">➕</span>Livraison
+  </a>
+  <a class="nav-item" href="contacts.html">
+    <span class="icon">👥</span>Contacts
+  </a>
+  <a class="nav-item active" href="stats.html">
+    <span class="icon">📈</span>Stats
+  </a>
+</nav>
+
+<script src="firebase-config.js"></script>
+<script>
+  const BASE = window.location.pathname.replace(/\/[^/]*$/, '/');
+
+  firebase.auth().onAuthStateChanged(user => {
+    if (!user) { window.location.href = BASE + 'login.html'; return; }
+    loadData();
+  });
+
+  let allDone = [];
+  let period = 7;
+  let chartBenef = null;
+  let chartCount = null;
+
+  function setPeriod(days, btn) {
+    period = days;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    render();
+  }
+
+  function filterByPeriod(list) {
+    if (period === 0) return list;
+    const cutoff = Date.now() - period * 86400000;
+    return list.filter(d => (d.timestamp || 0) >= cutoff);
+  }
+
+  function dateKey(ts) {
+    const d = new Date(ts);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+
+  function shortDate(key) {
+    const [, m, d] = key.split('-');
+    return `${d}/${m}`;
+  }
+
+  function buildDays(n) {
+    const days = [];
+    for (let i = n - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      days.push(dateKey(d.getTime()));
+    }
+    return days;
+  }
+
+  function render() {
+    const filtered = filterByPeriod(allDone);
+
+    // KPIs
+    const totalBenef = filtered.reduce((s, d) => s + (d.benefice || 0), 0);
+    const count      = filtered.length;
+    const moy        = count > 0 ? totalBenef / count : 0;
+
+    // Grouper par jour
+    const byDay = {};
+    filtered.forEach(d => {
+      if (!d.timestamp) return;
+      const k = dateKey(d.timestamp);
+      if (!byDay[k]) byDay[k] = { benef: 0, count: 0 };
+      byDay[k].benef += (d.benefice || 0);
+      byDay[k].count += 1;
+    });
+
+    // Meilleur jour
+    let bestDay = null, bestVal = 0;
+    Object.entries(byDay).forEach(([k, v]) => {
+      if (v.benef > bestVal) { bestVal = v.benef; bestDay = k; }
+    });
+
+    document.getElementById('kpiTotal').textContent   = `${totalBenef.toFixed(0)} DH`;
+    document.getElementById('kpiCount').textContent   = count;
+    document.getElementById('kpiMoy').textContent     = `${moy.toFixed(0)} DH`;
+    document.getElementById('kpiMeilleur').textContent = bestVal > 0 ? `${bestVal.toFixed(0)} DH` : '—';
+    document.getElementById('kpiMeilleurDate').textContent = bestDay ? shortDate(bestDay) : '';
+
+    // Labels & data pour graphiques
+    const displayDays = period > 0 ? period : Math.max(7, Object.keys(byDay).length);
+    const days = period > 0 ? buildDays(period) : Object.keys(byDay).sort();
+
+    const labels     = days.map(shortDate);
+    const benefData  = days.map(k => +(byDay[k]?.benef || 0).toFixed(0));
+    const countData  = days.map(k => byDay[k]?.count || 0);
+
+    drawBar('chartBenef', labels, benefData, 'Bénéfice (DH)', '#FF5A1F', '#FFE8DF');
+    drawBar('chartCount', labels, countData, 'Livraisons',    '#0F172A', '#E2E8F0');
+
+    // Top clients
+    const clients = {};
+    filtered.forEach(d => {
+      const key = d.clientName || d.clientPhone || 'Inconnu';
+      if (!clients[key]) clients[key] = { count: 0, benef: 0 };
+      clients[key].count++;
+      clients[key].benef += (d.benefice || 0);
+    });
+
+    const topList = Object.entries(clients)
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, 5);
+
+    const container = document.getElementById('topClients');
+    if (topList.length === 0) {
+      container.innerHTML = '<div class="empty-state">Aucune donnée</div>';
+      return;
+    }
+    container.innerHTML = topList.map(([name, v], i) => `
+      <div class="top-item">
+        <div class="top-rank">${i + 1}</div>
+        <div class="top-name">${name}</div>
+        <div class="top-count">${v.count}x &nbsp;</div>
+        <div class="top-benef">+${v.benef.toFixed(0)} DH</div>
+      </div>
+    `).join('');
+  }
+
+  function drawBar(id, labels, data, label, color, bgColor) {
+    const ctx = document.getElementById(id).getContext('2d');
+    if (id === 'chartBenef' && chartBenef) { chartBenef.destroy(); }
+    if (id === 'chartCount' && chartCount) { chartCount.destroy(); }
+
+    const chart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label,
+          data,
+          backgroundColor: bgColor,
+          borderColor: color,
+          borderWidth: 2,
+          borderRadius: 6,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { font: { family: 'Poppins', size: 11 }, color: '#94a3b8' }
+          },
+          y: {
+            grid: { color: '#f1f5f9' },
+            ticks: { font: { family: 'Poppins', size: 11 }, color: '#94a3b8' },
+            beginAtZero: true
+          }
+        }
+      }
+    });
+
+    if (id === 'chartBenef') chartBenef = chart;
+    else chartCount = chart;
+  }
+
+  function loadData() {
+    db.ref('livraisons').on('value', snap => {
+      const data = snap.val() || {};
+      allDone = Object.values(data).filter(d => !d.active);
+      render();
+    });
+  }
+</script>
+</body>
+</html>
