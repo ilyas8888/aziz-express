@@ -259,6 +259,31 @@
 
     .empty .icon { font-size: 40px; margin-bottom: 10px; }
 
+    .courier-badge {
+      display: inline-block;
+      background: #f1f5f9;
+      color: #64748b;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 20px;
+      margin-top: 4px;
+    }
+
+    .admin-link {
+      display: block;
+      margin: 12px 16px 0;
+      padding: 12px 16px;
+      background: white;
+      border-radius: 12px;
+      color: #0F172A;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      border-left: 4px solid #0F172A;
+    }
+
     /* MODAL FRAIS */
     .modal-overlay {
       display: none;
@@ -367,12 +392,16 @@
   </div>
 </div>
 
+<a href="admin-couriers.html" class="admin-link" id="adminPanel">👥 Gérer les coursiers →</a>
+
 <!-- DEMANDES -->
+<div id="demandeSection">
 <div class="section-header">
   <h2>📬 Demandes</h2>
   <span class="count" id="demandeCount">0</span>
 </div>
 <div class="deliveries" id="demandeList"></div>
+</div>
 
 <div class="search-box">
   <input id="searchInput" type="text" placeholder="🔍 Rechercher un client..." oninput="renderList()" />
@@ -444,16 +473,57 @@
 <script>
   const BASE = window.location.pathname.replace(/\/[^/]*$/, '/');
 
-  firebase.auth().onAuthStateChanged(user => {
-    if (!user) window.location.href = BASE + 'login.html';
-  });
-
+  let currentUid  = null;
+  let currentRole = 'admin';
+  let currentName = 'Admin';
   let allDeliveries = [];
   let allDemandes   = [];
   const TWELVE_HOURS = 12 * 60 * 60 * 1000;
 
   document.getElementById('headerDate').textContent =
     new Date().toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+
+  firebase.auth().onAuthStateChanged(user => {
+    if (!user) { window.location.href = BASE + 'login.html'; return; }
+    currentUid = user.uid;
+    db.ref('users/' + user.uid).once('value', snap => {
+      const userData = snap.val();
+      if (userData) {
+        currentRole = userData.role || 'admin';
+        currentName = userData.name || 'Admin';
+      } else {
+        currentRole = 'admin';
+        currentName = 'Aziz';
+        db.ref('users/' + user.uid).set({ role: 'admin', name: 'Aziz', email: user.email || '' });
+      }
+      initDashboard();
+    });
+  });
+
+  function initDashboard() {
+    if (currentRole === 'courier') {
+      document.getElementById('demandeSection').style.display = 'none';
+      document.getElementById('adminPanel').style.display     = 'none';
+    }
+
+    db.ref('livraisons').on('value', snap => {
+      const data = snap.val() || {};
+      allDeliveries = Object.entries(data)
+        .map(([id, v]) => ({ id, ...v }))
+        .filter(d => currentRole === 'admin' || !d.courierId || d.courierId === currentUid)
+        .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      renderList();
+    });
+
+    db.ref('demandes').on('value', snap => {
+      const data = snap.val() || {};
+      allDemandes = Object.entries(data)
+        .map(([id, v]) => ({ id, ...v }))
+        .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      cleanOldDemandes(allDemandes);
+      renderDemandes();
+    });
+  }
 
   function timeAgo(ts) {
     if (!ts) return '—';
@@ -508,6 +578,7 @@
       card.innerHTML = `
         <div class="client-name">${d.clientName || 'Client inconnu'}</div>
         ${d.clientPhone ? `<div class="client-phone">📞 ${d.clientPhone}</div>` : ''}
+        ${currentRole === 'admin' && d.courierName ? `<span class="courier-badge">🛵 ${d.courierName}</span>` : ''}
         <div class="delivery-time">🕐 Démarré il y a ${timeAgo(d.timestamp)}</div>
         <div class="active-actions">
           <a class="btn-wa" href="${getWaLink(d)}" target="_blank">📱 WhatsApp</a>
@@ -633,13 +704,15 @@
   function acceptDemande(d) {
     const deliveryId = 'livraison_' + Date.now();
     db.ref('livraisons/' + deliveryId).set({
-      active:      true,
-      clientName:  d.clientName,
-      clientPhone: d.clientPhone,
-      details:     d.details || '',
-      destLat:     d.lat  || null,
-      destLng:     d.lng  || null,
-      timestamp:   Date.now()
+      active:       true,
+      clientName:   d.clientName,
+      clientPhone:  d.clientPhone,
+      details:      d.details || '',
+      destLat:      d.lat  || null,
+      destLng:      d.lng  || null,
+      timestamp:    Date.now(),
+      courierId:    currentUid,
+      courierName:  currentName
     });
     db.ref('demandes/' + d.id).remove();
   }
@@ -659,22 +732,6 @@
     });
   }
 
-  db.ref('demandes').on('value', snap => {
-    const data = snap.val() || {};
-    allDemandes = Object.entries(data)
-      .map(([id, v]) => ({ id, ...v }))
-      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-    cleanOldDemandes(allDemandes);
-    renderDemandes();
-  });
-
-  db.ref('livraisons').on('value', snap => {
-    const data = snap.val() || {};
-    allDeliveries = Object.entries(data)
-      .map(([id, v]) => ({ id, ...v }))
-      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-    renderList();
-  });
 
   // --- KEEPALIVE ---
   const dot = document.getElementById('connDot');

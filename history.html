@@ -234,11 +234,19 @@
 <script>
   const BASE = window.location.pathname.replace(/\/[^/]*$/, '/');
 
-  firebase.auth().onAuthStateChanged(user => {
-    if (!user) window.location.href = BASE + 'login.html';
-  });
-
+  let currentUid  = null;
+  let currentRole = 'admin';
   let allDone = [];
+
+  firebase.auth().onAuthStateChanged(user => {
+    if (!user) { window.location.href = BASE + 'login.html'; return; }
+    currentUid = user.uid;
+    db.ref('users/' + user.uid).once('value', snap => {
+      const d = snap.val();
+      currentRole = (d && d.role) ? d.role : 'admin';
+      loadHistory();
+    });
+  });
 
   function isToday(ts) {
     return ts && new Date(ts).toDateString() === new Date().toDateString();
@@ -333,14 +341,17 @@
     db.ref('livraisons/' + id).remove();
   }
 
-  db.ref('livraisons').on('value', snap => {
-    const data = snap.val() || {};
-    allDone = Object.entries(data)
-      .map(([id, v]) => ({ id, ...v }))
-      .filter(d => !d.active)
-      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-    renderList();
-  });
+  function loadHistory() {
+    db.ref('livraisons').on('value', snap => {
+      const data = snap.val() || {};
+      allDone = Object.entries(data)
+        .map(([id, v]) => ({ id, ...v }))
+        .filter(d => !d.active)
+        .filter(d => currentRole === 'admin' || !d.courierId || d.courierId === currentUid)
+        .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      renderList();
+    });
+  }
 </script>
 </body>
 </html>

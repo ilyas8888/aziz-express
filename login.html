@@ -129,7 +129,15 @@
       document.getElementById('errorMsg').style.display = 'none';
 
       firebase.auth().signInWithEmailAndPassword(email, password)
-        .then(() => window.location.href = BASE + 'dashboard.html')
+        .then(cred => {
+          const uid = cred.user.uid;
+          db.ref('users/' + uid).once('value', snap => {
+            if (!snap.exists()) {
+              db.ref('users/' + uid).set({ role: 'admin', name: 'Aziz', email });
+            }
+            window.location.href = BASE + 'dashboard.html';
+          });
+        })
         .catch(() => document.getElementById('errorMsg').style.display = 'block');
     }
 

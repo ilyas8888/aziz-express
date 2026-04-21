@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <title>Coursiers — Aziz Express</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #FFF5F0;
+      min-height: 100vh;
+      padding-bottom: 40px;
+    }
+
+    header {
+      background: #0F172A;
+      color: white;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+    header h1 { font-size: 18px; }
+    .btn-back {
+      background: rgba(255,255,255,0.15);
+      border: none; color: white;
+      padding: 6px 12px; border-radius: 8px;
+      cursor: pointer; font-size: 13px;
+      text-decoration: none;
+    }
+
+    .page {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* CARTE COURSIER */
+    .courier-card {
+      background: white;
+      border-radius: 14px;
+      padding: 16px 18px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .courier-avatar {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, #FF5A1F, #FF8C42);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; flex-shrink: 0;
+    }
+    .courier-info { flex: 1; }
+    .courier-name { font-size: 15px; font-weight: 600; color: #0F172A; }
+    .courier-sub  { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+    .btn-delete-courier {
+      background: #fdecea; color: #e74c3c;
+      border: none; border-radius: 8px;
+      padding: 8px 11px; font-size: 15px;
+      cursor: pointer; flex-shrink: 0;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 30px;
+      color: #94a3b8;
+      font-size: 13px;
+    }
+    .empty-state .icon { font-size: 36px; margin-bottom: 8px; }
+
+    /* FORMULAIRE */
+    .form-card {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .form-title {
+      font-size: 14px; font-weight: 700;
+      color: #0F172A; margin-bottom: 16px;
+    }
+    .form-group { margin-bottom: 12px; }
+    .form-group label {
+      font-size: 12px; font-weight: 500;
+      color: #64748b; display: block; margin-bottom: 4px;
+    }
+    .form-group input {
+      width: 100%; padding: 11px 14px;
+      border-radius: 10px; border: 1.5px solid #e2e8f0;
+      font-size: 14px; font-family: 'Poppins', sans-serif;
+      outline: none; transition: border-color 0.2s;
+    }
+    .form-group input:focus { border-color: #FF5A1F; }
+
+    .btn-create {
+      width: 100%; padding: 13px;
+      background: linear-gradient(135deg, #FF5A1F, #FF8C42);
+      color: white; border: none; border-radius: 12px;
+      font-size: 15px; font-weight: 600;
+      font-family: 'Poppins', sans-serif;
+      cursor: pointer; margin-top: 4px;
+      box-shadow: 0 4px 14px rgba(255,90,31,0.3);
+    }
+    .btn-create:disabled { opacity: 0.6; cursor: default; }
+
+    .msg {
+      font-size: 13px; text-align: center;
+      margin-top: 10px; min-height: 18px;
+    }
+    .msg.success { color: #059669; }
+    .msg.error   { color: #e74c3c; }
+
+    .section-label {
+      font-size: 12px; font-weight: 700;
+      color: #94a3b8; text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>👥 Coursiers</h1>
+  <a href="dashboard.html" class="btn-back">← Dashboard</a>
+</header>
+
+<div class="page">
+
+  <div class="section-label">Coursiers actifs</div>
+  <div id="courierList"><div class="empty-state"><div class="icon">🛵</div>Chargement...</div></div>
+
+  <div class="section-label" style="margin-top:4px">Ajouter un coursier</div>
+  <div class="form-card">
+    <div class="form-group">
+      <label>Nom complet</label>
+      <input id="cName" type="text" placeholder="Ex: Karim Benali" />
+    </div>
+    <div class="form-group">
+      <label>Téléphone</label>
+      <input id="cPhone" type="tel" placeholder="Ex: 0612345678" />
+    </div>
+    <div class="form-group">
+      <label>Email</label>
+      <input id="cEmail" type="email" placeholder="karim@email.com" />
+    </div>
+    <div class="form-group">
+      <label>Mot de passe</label>
+      <input id="cPass" type="password" placeholder="Minimum 6 caractères" />
+    </div>
+    <button class="btn-create" id="btnCreate" onclick="createCourier()">➕ Créer le compte coursier</button>
+    <div class="msg" id="createMsg"></div>
+  </div>
+
+</div>
+
+<script src="firebase-config.js"></script>
+<script>
+  const BASE = window.location.pathname.replace(/\/[^/]*$/, '/');
+
+  // Vérification admin
+  firebase.auth().onAuthStateChanged(user => {
+    if (!user) { window.location.href = BASE + 'login.html'; return; }
+    db.ref('users/' + user.uid).once('value', snap => {
+      const d = snap.val();
+      if (d && d.role === 'courier') {
+        window.location.href = BASE + 'dashboard.html';
+        return;
+      }
+      loadCouriers();
+    });
+  });
+
+  function loadCouriers() {
+    db.ref('users').orderByChild('role').equalTo('courier').on('value', snap => {
+      const data = snap.val() || {};
+      const couriers = Object.entries(data).map(([uid, v]) => ({ uid, ...v }));
+      const list = document.getElementById('courierList');
+
+      if (couriers.length === 0) {
+        list.innerHTML = '<div class="empty-state"><div class="icon">🛵</div>Aucun coursier pour l\'instant</div>';
+        return;
+      }
+
+      list.innerHTML = '';
+      couriers.forEach(c => {
+        const card = document.createElement('div');
+        card.className = 'courier-card';
+        card.innerHTML = `
+          <div class="courier-avatar">🛵</div>
+          <div class="courier-info">
+            <div class="courier-name">${c.name || '—'}</div>
+            <div class="courier-sub">${c.phone || ''} ${c.email ? '· ' + c.email : ''}</div>
+          </div>
+          <button class="btn-delete-courier" title="Supprimer">🗑</button>
+        `;
+        card.querySelector('.btn-delete-courier').onclick = () => deleteCourier(c.uid, c.name);
+        list.appendChild(card);
+      });
+    });
+  }
+
+  function deleteCourier(uid, name) {
+    if (!confirm(`Supprimer le compte de ${name} ?`)) return;
+    db.ref('users/' + uid).remove();
+  }
+
+  async function createCourier() {
+    const name  = document.getElementById('cName').value.trim();
+    const phone = document.getElementById('cPhone').value.trim();
+    const email = document.getElementById('cEmail').value.trim();
+    const pass  = document.getElementById('cPass').value;
+    const msg   = document.getElementById('createMsg');
+    const btn   = document.getElementById('btnCreate');
+
+    if (!name || !email || !pass) {
+      msg.className = 'msg error';
+      msg.textContent = 'Nom, email et mot de passe obligatoires';
+      return;
+    }
+    if (pass.length < 6) {
+      msg.className = 'msg error';
+      msg.textContent = 'Mot de passe minimum 6 caractères';
+      return;
+    }
+
+    btn.disabled = true;
+    msg.className = 'msg';
+    msg.textContent = 'Création en cours...';
+
+    try {
+      // Créer le compte sans déconnecter l'admin
+      const secondApp = firebase.initializeApp(firebaseConfig, 'secondary_' + Date.now());
+      const cred = await secondApp.auth().createUserWithEmailAndPassword(email, pass);
+      const uid  = cred.user.uid;
+
+      await db.ref('users/' + uid).set({ name, phone, email, role: 'courier' });
+
+      await secondApp.auth().signOut();
+      await secondApp.delete();
+
+      document.getElementById('cName').value  = '';
+      document.getElementById('cPhone').value = '';
+      document.getElementById('cEmail').value = '';
+      document.getElementById('cPass').value  = '';
+
+      msg.className = 'msg success';
+      msg.textContent = `✅ Compte créé pour ${name}`;
+    } catch (err) {
+      msg.className = 'msg error';
+      msg.textContent = err.code === 'auth/email-already-in-use'
+        ? 'Cet email est déjà utilisé'
+        : 'Erreur : ' + err.message;
+    }
+
+    btn.disabled = false;
+  }
+</script>
+</body>
+</html>
