@@ -166,6 +166,21 @@
       line-height: 1.6;
     }
 
+    .price-estimate {
+      display: none;
+      background: #FFF5F0;
+      border: 1.5px solid #FF5A1F;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-top: 10px;
+    }
+    .price-estimate .price-val {
+      font-size: 20px; font-weight: 700; color: #FF5A1F;
+    }
+    .price-estimate .price-lbl {
+      font-size: 11px; color: #94a3b8; margin-top: 2px;
+    }
+
     .note {
       font-size: 12px; color: #94a3b8;
       text-align: center; margin-top: 12px;
@@ -206,10 +221,24 @@
       <div id="map"></div>
       <div class="coords-display" id="coordsDisplay">Aucune position sélectionnée</div>
       <button class="btn-gps" onclick="useGPS()">📡 Utiliser ma position GPS</button>
+      <div class="price-estimate" id="priceEstimate">
+        <div class="price-val" id="priceVal">— DH</div>
+        <div class="price-lbl">Frais de livraison estimés · Aziz confirme le prix exact</div>
+      </div>
     </div>
 
     <div class="step">
       <div class="step-title">📦 Détails de la commande</div>
+      <div class="form-group">
+        <label>Heure souhaitée</label>
+        <select id="orderTime" style="width:100%;padding:12px 14px;border-radius:10px;border:1.5px solid #e2e8f0;font-size:15px;font-family:'Poppins',sans-serif;outline:none;background:white;">
+          <option value="Dès que possible">⚡ Dès que possible</option>
+          <option value="Dans 1h">🕐 Dans 1h</option>
+          <option value="Dans 2h">🕑 Dans 2h</option>
+          <option value="Ce soir (après 18h)">🌙 Ce soir (après 18h)</option>
+          <option value="Demain matin">☀️ Demain matin</option>
+        </select>
+      </div>
       <div class="form-group">
         <label>Description (optionnel)</label>
         <textarea id="orderDetails" placeholder="Ex: 2 colis depuis le marché central..."></textarea>
@@ -256,6 +285,23 @@
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
   map.on('click', e => placeMarker(e.latlng.lat, e.latlng.lng));
 
+  function estimatePrice(lat, lng) {
+    const R = 6371;
+    const dLat = (lat - OUJDA[0]) * Math.PI / 180;
+    const dLng = (lng - OUJDA[1]) * Math.PI / 180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(OUJDA[0]*Math.PI/180) * Math.cos(lat*Math.PI/180) * Math.sin(dLng/2)**2;
+    const km = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+    let price;
+    if (km < 1)      price = 15;
+    else if (km <= 5) price = Math.round(km * 10);
+    else if (km <= 8) price = Math.round(km * 8);
+    else              price = 65;
+
+    price = Math.min(Math.max(price, 15), 65);
+    return { price, km: km.toFixed(1) };
+  }
+
   function placeMarker(lat, lng) {
     selectedLat = lat;
     selectedLng = lng;
@@ -265,6 +311,12 @@
     document.getElementById('coordsDisplay').textContent =
       `✓ Position marquée : ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
     map.setView([lat, lng], 15);
+
+    const { price, km } = estimatePrice(lat, lng);
+    document.getElementById('priceVal').textContent = `~${price} DH`;
+    document.getElementById('priceEstimate').style.display = 'block';
+    window._estimatedPrice = price;
+    window._estimatedKm = km;
   }
 
   function useGPS() {
@@ -279,25 +331,31 @@
     const name    = document.getElementById('clientName').value.trim();
     const phone   = document.getElementById('clientPhone').value.trim();
     const details = document.getElementById('orderDetails').value.trim();
+    const time    = document.getElementById('orderTime').value;
 
     if (!name)  return alert('Entrez votre nom');
     if (!phone) return alert('Entrez votre téléphone');
     if (!selectedLat) return alert('Marquez votre position sur la carte');
 
     const mapsLink = `https://maps.google.com/?q=${selectedLat},${selectedLng}`;
+    const price = window._estimatedPrice || '—';
+    const km    = window._estimatedKm    || '—';
 
     const msg = `🛵 *Nouvelle commande — Aziz Express*
 
 👤 *Client :* ${name}
 📞 *Téléphone :* ${phone}
 📍 *Position :* ${mapsLink}
+🕐 *Heure souhaitée :* ${time}
+🚚 *Distance estimée :* ${km} km
+💰 *Frais estimés :* ~${price} DH
 ${details ? `📦 *Détails :* ${details}` : ''}
 
 _Envoyé depuis aziz-express_`;
 
     const waUrl = `https://wa.me/${AZIZ_PHONE}?text=${encodeURIComponent(msg)}`;
     window._lastWaUrl = waUrl;
-    window._pendingData = { name, phone, details, lat: selectedLat, lng: selectedLng };
+    window._pendingData = { name, phone, details, time, lat: selectedLat, lng: selectedLng, fraisEstimes: price };
     window.open(waUrl, '_blank');
 
     document.getElementById('formSection').style.display    = 'none';
@@ -307,13 +365,15 @@ _Envoyé depuis aziz-express_`;
   function confirmSent() {
     const d = window._pendingData;
     db.ref('demandes').push({
-      clientName:  d.name,
-      clientPhone: d.phone,
-      details:     d.details,
-      lat:         d.lat,
-      lng:         d.lng,
-      timestamp:   Date.now(),
-      status:      'pending'
+      clientName:   d.name,
+      clientPhone:  d.phone,
+      details:      d.details,
+      time:         d.time,
+      fraisEstimes: d.fraisEstimes,
+      lat:          d.lat,
+      lng:          d.lng,
+      timestamp:    Date.now(),
+      status:       'pending'
     });
     document.getElementById('confirmSection').style.display = 'none';
     document.getElementById('successSection').style.display = 'block';
