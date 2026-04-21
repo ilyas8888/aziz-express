@@ -38,6 +38,24 @@
       cursor: pointer; font-size: 12px;
     }
 
+    .conn-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: #22c55e;
+      flex-shrink: 0;
+      transition: background 0.4s;
+      box-shadow: 0 0 0 2px rgba(34,197,94,0.3);
+    }
+    .conn-dot.offline {
+      background: #ef4444;
+      box-shadow: 0 0 0 2px rgba(239,68,68,0.3);
+      animation: blink 1.2s infinite;
+    }
+    @keyframes blink {
+      0%,100% { opacity: 1; }
+      50%      { opacity: 0.3; }
+    }
+
     .stats {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -328,6 +346,7 @@
 <header>
   <h1>🛵 Aziz Express</h1>
   <div class="header-right">
+    <div class="conn-dot" id="connDot" title="Connexion"></div>
     <span class="header-date" id="headerDate"></span>
     <button class="btn-logout" onclick="firebase.auth().signOut().then(() => window.location.href = BASE + 'login.html')">Déco</button>
   </div>
@@ -649,6 +668,35 @@
       .map(([id, v]) => ({ id, ...v }))
       .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
     renderList();
+  });
+
+  // --- KEEPALIVE ---
+  const dot = document.getElementById('connDot');
+
+  // Surveille l'état réel de la connexion Firebase
+  db.ref('.info/connected').on('value', snap => {
+    if (snap.val()) {
+      dot.classList.remove('offline');
+    } else {
+      dot.classList.add('offline');
+    }
+  });
+
+  // Ping Firebase toutes les 30s pour maintenir la connexion active
+  function pingFirebase() {
+    firebase.auth().currentUser &&
+      db.ref('_ping').set(Date.now());
+  }
+  const pingInterval = setInterval(pingFirebase, 30000);
+
+  // Quand l'écran revient du sleep, reconnecter Firebase
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      firebase.database().goOnline();
+      pingFirebase();
+    } else {
+      // Garder la connexion même en arrière-plan (ne pas appeler goOffline)
+    }
   });
 </script>
 </body>

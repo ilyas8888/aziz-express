@@ -119,6 +119,21 @@
         cursor: pointer; margin-top: 10px; width: 280px;
       }
 
+      .alert-banner {
+        display: none;
+        width: 100%;
+        max-width: 320px;
+        background: #fff3cd;
+        border: 1.5px solid #f59e0b;
+        border-radius: 12px;
+        padding: 12px 14px;
+        font-size: 13px;
+        color: #92400e;
+        margin: 10px 0;
+        line-height: 1.5;
+      }
+      .alert-banner.show { display: block; }
+
       .nav-links {
         display: flex;
         gap: 20px;
@@ -162,6 +177,13 @@
 
     <button id="btnStart" onclick="startTracking()">Démarrer la livraison</button>
     <button id="btnStop"  onclick="stopTracking()">Arrêter</button>
+
+    <div class="alert-banner" id="alertBanner">
+      ⚠️ <strong>Ne fermez pas cette page !</strong><br>
+      Le GPS s'arrête si vous verrouillez l'écran ou changez d'application.<br>
+      Gardez cette page ouverte pendant toute la livraison.
+    </div>
+
     <p id="status">En attente...</p>
 
     <div id="linkBox">
@@ -188,10 +210,20 @@
         if (!user) window.location.href = BASE + 'login.html';
       });
 
-      let watchId = null;
-      let destLat  = null;
-      let destLng  = null;
+      let watchId    = null;
+      let destLat    = null;
+      let destLng    = null;
+      let isTracking = false;
       const deliveryId = "livraison_" + Date.now();
+
+      // Empêcher fermeture accidentelle pendant livraison
+      window.addEventListener('beforeunload', e => {
+        if (isTracking) {
+          e.preventDefault();
+          e.returnValue = '';
+        }
+      });
+
 
       // Charger les contacts dans le dropdown
       window.addEventListener('load', () => {
@@ -308,12 +340,14 @@
         const clientName  = document.getElementById("clientName").value.trim() || "Client";
         const clientPhone = document.getElementById("clientPhone").value.trim();
 
+        isTracking = true;
         document.getElementById("btnStart").style.display        = "none";
         document.getElementById("btnStop").style.display         = "block";
         document.getElementById("clientName").disabled           = true;
         document.getElementById("clientPhone").disabled          = true;
         document.getElementById("contactSelect").disabled        = true;
         document.getElementById("status").textContent            = "GPS actif...";
+        document.getElementById("alertBanner").classList.add("show");
 
         const trackUrl = window.location.href.replace(/[^/]*$/, '') + 'track.html?id=' + deliveryId;
 
@@ -373,10 +407,12 @@
       }
 
       function stopTracking() {
+        isTracking = false;
         if (watchId) navigator.geolocation.clearWatch(watchId);
         db.ref("livraisons/" + deliveryId).update({ active: false });
         document.getElementById("btnStart").style.display = "block";
         document.getElementById("btnStop").style.display  = "none";
+        document.getElementById("alertBanner").classList.remove("show");
         document.getElementById("status").textContent     = "Livraison terminée.";
       }
     </script>
