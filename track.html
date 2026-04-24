@@ -278,7 +278,7 @@
     const data = snap.val();
     if (!data) return;
 
-    const hasPos = data.lat && data.lng;
+    const hasPos = data.lat != null && data.lng != null;
     const pos    = hasPos ? [data.lat, data.lng] : null;
 
     // Marqueur livreur

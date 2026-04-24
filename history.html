@@ -252,6 +252,14 @@
     return ts && new Date(ts).toDateString() === new Date().toDateString();
   }
 
+  function getCreatedAt(d) {
+    return d.createdAt || d.timestamp || 0;
+  }
+
+  function getCompletedAt(d) {
+    return d.completedAt || (!d.active ? (d.timestamp || d.createdAt || 0) : 0);
+  }
+
   function timeAgo(ts) {
     if (!ts) return '—';
     const diff = Date.now() - ts;
@@ -285,7 +293,7 @@
 
     // Calcul bénéfices
     const benefToday = allDone
-      .filter(d => isToday(d.timestamp) && d.benefice)
+      .filter(d => isToday(getCompletedAt(d) || getCreatedAt(d)) && d.benefice)
       .reduce((s, d) => s + d.benefice, 0);
     const benefTotal = allDone
       .filter(d => d.benefice)
@@ -322,7 +330,7 @@
         <div class="card-done-top">
           <div class="done-info">
             <div class="done-name">${d.clientName || 'Client inconnu'}</div>
-            <div class="done-sub">${d.clientPhone ? d.clientPhone + ' · ' : ''}${timeAgo(d.timestamp)}</div>
+            <div class="done-sub">${d.clientPhone ? d.clientPhone + ' · ' : ''}${timeAgo(getCompletedAt(d) || getCreatedAt(d))}</div>
           </div>
           <div class="done-actions">
             <a class="btn-done-wa" href="${getWaLink(d)}" target="_blank">📱</a>
@@ -348,7 +356,7 @@
         .map(([id, v]) => ({ id, ...v }))
         .filter(d => !d.active)
         .filter(d => currentRole === 'admin' || !d.courierId || d.courierId === currentUid)
-        .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        .sort((a, b) => (getCompletedAt(b) || getCreatedAt(b)) - (getCompletedAt(a) || getCreatedAt(a)));
       renderList();
     });
   }

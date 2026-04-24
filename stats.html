@@ -275,10 +275,14 @@
     render();
   }
 
+  function getCreatedAt(d) {
+    return d.createdAt || d.timestamp || 0;
+  }
+
   function filterByPeriod(list) {
     if (period === 0) return list;
     const cutoff = Date.now() - period * 86400000;
-    return list.filter(d => (d.timestamp || 0) >= cutoff);
+    return list.filter(d => getCreatedAt(d) >= cutoff);
   }
 
   function dateKey(ts) {
@@ -312,8 +316,9 @@
     // Grouper par jour
     const byDay = {};
     filtered.forEach(d => {
-      if (!d.timestamp) return;
-      const k = dateKey(d.timestamp);
+      const ts = getCreatedAt(d);
+      if (!ts) return;
+      const k = dateKey(ts);
       if (!byDay[k]) byDay[k] = { benef: 0, count: 0 };
       byDay[k].benef += (d.benefice || 0);
       byDay[k].count += 1;

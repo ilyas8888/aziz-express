@@ -207,13 +207,14 @@
       const BASE = window.location.pathname.replace(/\/[^/]*$/, '/');
 
 
-      let watchId      = null;
-      let destLat      = null;
-      let destLng      = null;
-      let isTracking   = false;
-      let currentUid   = null;
-      let currentName  = 'Coursier';
-      const deliveryId = "livraison_" + Date.now();
+      let watchId           = null;
+      let previewWatchId    = null;
+      let destLat           = null;
+      let destLng           = null;
+      let isTracking        = false;
+      let currentUid        = null;
+      let currentName       = 'Coursier';
+      let currentDeliveryId = null;
 
       firebase.auth().onAuthStateChanged(user => {
         if (!user) { window.location.href = BASE + 'login.html'; return; }
@@ -260,6 +261,10 @@
           destLat = null; destLng = null;
           document.getElementById('destBadge').style.display = 'none';
           document.getElementById('destMap').style.display   = 'none';
+          if (previewWatchId) {
+            navigator.geolocation.clearWatch(previewWatchId);
+            previewWatchId = null;
+          }
           return;
         }
         const c = JSON.parse(val);
@@ -311,8 +316,13 @@
                 });
             }
 
+            if (previewWatchId) {
+              navigator.geolocation.clearWatch(previewWatchId);
+              previewWatchId = null;
+            }
+
             if (navigator.geolocation) {
-              navigator.geolocation.watchPosition(pos => {
+              previewWatchId = navigator.geolocation.watchPosition(pos => {
                 const courierLatLng = [pos.coords.latitude, pos.coords.longitude];
                 if (!courierMarker) {
                   courierMarker = L.marker(courierLatLng, { icon: courierIcon })
@@ -348,6 +358,7 @@
         const clientName  = document.getElementById("clientName").value.trim() || "Client";
         const clientPhone = document.getElementById("clientPhone").value.trim();
 
+        currentDeliveryId = "livraison_" + Date.now();
         isTracking = true;
         document.getElementById("btnStart").style.display        = "none";
         document.getElementById("btnStop").style.display         = "block";
@@ -357,7 +368,7 @@
         document.getElementById("status").textContent            = "GPS actif...";
         document.getElementById("alertBanner").classList.add("show");
 
-        const trackUrl = window.location.href.replace(/[^/]*$/, '') + 'track.html?id=' + deliveryId;
+        const trackUrl = window.location.href.replace(/[^/]*$/, '') + 'track.html?id=' + currentDeliveryId;
 
         document.getElementById("trackLink").value = trackUrl;
         document.getElementById("linkBox").style.display = "block";
@@ -371,18 +382,19 @@
         };
 
         const deliveryData = {
-          active:      true,
+          active:         true,
           clientName,
           clientPhone,
-          timestamp:   Date.now(),
-          courierId:   currentUid,
-          courierName: currentName
+          createdAt:      Date.now(),
+          lastLocationAt: Date.now(),
+          courierId:      currentUid,
+          courierName:    currentName
         };
         if (destLat && destLng) {
           deliveryData.destLat = destLat;
           deliveryData.destLng = destLng;
         }
-        db.ref("livraisons/" + deliveryId).update(deliveryData);
+        db.ref("livraisons/" + currentDeliveryId).update(deliveryData);
 
         // Auto-enregistrer le client dans contacts s'il n'existe pas encore
         const selectedVal = document.getElementById('contactSelect').value;
@@ -403,8 +415,11 @@
         watchId = navigator.geolocation.watchPosition(
           pos => {
             const { latitude, longitude } = pos.coords;
-            db.ref("livraisons/" + deliveryId).update({
-              lat: latitude, lng: longitude, timestamp: Date.now()
+            if (!currentDeliveryId) return;
+            db.ref("livraisons/" + currentDeliveryId).update({
+              lat: latitude,
+              lng: longitude,
+              lastLocationAt: Date.now()
             });
             document.getElementById("status").textContent =
               `Position envoyée : ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
@@ -419,11 +434,17 @@
       function stopTracking() {
         isTracking = false;
         if (watchId) navigator.geolocation.clearWatch(watchId);
-        db.ref("livraisons/" + deliveryId).update({ active: false });
+        if (currentDeliveryId) {
+          db.ref("livraisons/" + currentDeliveryId).update({
+            active: false,
+            completedAt: Date.now()
+          });
+        }
         document.getElementById("btnStart").style.display = "block";
         document.getElementById("btnStop").style.display  = "none";
         document.getElementById("alertBanner").classList.remove("show");
         document.getElementById("status").textContent     = "Livraison terminée.";
+        currentDeliveryId = null;
       }
     </script>
   </body>

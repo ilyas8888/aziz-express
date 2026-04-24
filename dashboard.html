@@ -511,7 +511,7 @@
       allDeliveries = Object.entries(data)
         .map(([id, v]) => ({ id, ...v }))
         .filter(d => currentRole === 'admin' || !d.courierId || d.courierId === currentUid)
-        .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        .sort((a, b) => getCreatedAt(b) - getCreatedAt(a));
       renderList();
     });
 
@@ -519,7 +519,7 @@
       const data = snap.val() || {};
       allDemandes = Object.entries(data)
         .map(([id, v]) => ({ id, ...v }))
-        .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        .sort((a, b) => getCreatedAt(b) - getCreatedAt(a));
       cleanOldDemandes(allDemandes);
       renderDemandes();
     });
@@ -538,6 +538,14 @@
 
   function isToday(ts) {
     return ts && new Date(ts).toDateString() === new Date().toDateString();
+  }
+
+  function getCreatedAt(d) {
+    return d.createdAt || d.timestamp || 0;
+  }
+
+  function getCompletedAt(d) {
+    return d.completedAt || (!d.active ? (d.timestamp || d.createdAt || 0) : 0);
   }
 
   function getWaLink(d) {
@@ -560,7 +568,7 @@
     document.getElementById('activeCount').className   = 'count' + (active.length === 0 ? ' zero' : '');
 
     document.getElementById('statActive').textContent = allDeliveries.filter(d => d.active).length;
-    document.getElementById('statToday').textContent  = allDeliveries.filter(d => isToday(d.timestamp)).length;
+    document.getElementById('statToday').textContent  = allDeliveries.filter(d => isToday(getCreatedAt(d))).length;
     document.getElementById('statTotal').textContent  = allDeliveries.length;
 
     const list = document.getElementById('activeList');
@@ -579,7 +587,7 @@
         <div class="client-name">${d.clientName || 'Client inconnu'}</div>
         ${d.clientPhone ? `<div class="client-phone">📞 ${d.clientPhone}</div>` : ''}
         ${currentRole === 'admin' && d.courierName ? `<span class="courier-badge">🛵 ${d.courierName}</span>` : ''}
-        <div class="delivery-time">🕐 Démarré il y a ${timeAgo(d.timestamp)}</div>
+        <div class="delivery-time">🕐 Démarré il y a ${timeAgo(getCreatedAt(d))}</div>
         <div class="active-actions">
           <a class="btn-wa" href="${getWaLink(d)}" target="_blank">📱 WhatsApp</a>
           <a class="btn-track" href="${trackUrl}" target="_blank">📍 Suivre</a>
@@ -627,7 +635,10 @@
 
   function skipFrais() {
     document.getElementById('fraisModal').classList.remove('open');
-    db.ref('livraisons/' + _finishId).update({ active: false });
+    db.ref('livraisons/' + _finishId).update({
+      active: false,
+      completedAt: Date.now()
+    });
     _finishId = null;
   }
 
@@ -636,7 +647,10 @@
     const remise    = parseFloat(document.getElementById('fRemise').value)    || null;
     const livraison = parseFloat(document.getElementById('fLivraison').value) || null;
 
-    const update = { active: false };
+    const update = {
+      active: false,
+      completedAt: Date.now()
+    };
     if (prix)      update.prixArticle = prix;
     if (remise)    update.remise      = remise;
     if (livraison) update.fraisClient = livraison;
@@ -688,7 +702,7 @@
         ${d.clientPhone ? `<div class="client-phone">📞 ${d.clientPhone}</div>` : ''}
         ${d.details    ? `<div class="demande-details">📦 ${d.details}</div>` : ''}
         ${mapsLink}
-        <div class="demande-time">🕐 Reçue il y a ${timeAgo(d.timestamp)}</div>
+        <div class="demande-time">🕐 Reçue il y a ${timeAgo(getCreatedAt(d))}</div>
         <div class="demande-expire">${expireStr}</div>
         <div class="demande-actions">
           <button class="btn-accept">✓ Accepter & démarrer</button>
@@ -710,7 +724,7 @@
       details:      d.details || '',
       destLat:      d.lat  || null,
       destLng:      d.lng  || null,
-      timestamp:    Date.now(),
+      createdAt:    Date.now(),
       courierId:    currentUid,
       courierName:  currentName
     });
