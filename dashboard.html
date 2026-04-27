@@ -162,6 +162,23 @@
       cursor: pointer;
     }
 
+    .btn-transfer {
+      background: #f1f5f9; color: #0F172A;
+      border: none; border-radius: 10px;
+      padding: 10px; font-size: 13px;
+      font-weight: 600; cursor: pointer;
+      width: 100%; margin-top: 8px;
+    }
+    .courier-option {
+      display: flex; align-items: center;
+      padding: 12px 14px; border-radius: 12px;
+      border: 1.5px solid #e2e8f0; margin-bottom: 8px;
+      cursor: pointer; font-size: 14px; font-weight: 500; color: #0F172A;
+    }
+    .courier-option:hover, .courier-option.selected {
+      border-color: #FF5A1F; background: #FFF5F0;
+    }
+
     /* DEMANDES */
     .card-demande {
       background: white;
@@ -466,6 +483,19 @@
   </div>
 </div>
 
+<!-- MODAL TRANSFERT -->
+<div class="modal-overlay" id="transferModal">
+  <div class="modal-box">
+    <div class="modal-title"> Transférer la livraison</div>
+    <div class="modal-sub" id="transferModalSub"></div>
+    <div id="courierList" style="margin-top:16px"></div>
+    <div class="modal-actions" style="margin-top:16px">
+      <button class="btn-modal-skip" onclick="closeTransferModal()">Annuler</button>
+      <button class="btn-modal-confirm" id="btnConfirmTransfer" onclick="confirmTransfer()" disabled>Transférer</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -587,7 +617,7 @@
         <div class="client-name">${d.clientName || 'Client inconnu'}</div>
         ${d.clientPhone ? `<div class="client-phone">📞 ${d.clientPhone}</div>` : ''}
         ${currentRole === 'admin' && d.courierName ? `<span class="courier-badge">🛵 ${d.courierName}</span>` : ''}
-        <div class="delivery-time">🕐 Démarré il y a ${timeAgo(getCreatedAt(d))}</div>
+        <div class="delivery-time">🕐 Démarré ${timeAgo(getCreatedAt(d))}</div>
         <div class="active-actions">
           <a class="btn-wa" href="${getWaLink(d)}" target="_blank">📱 WhatsApp</a>
           <a class="btn-track" href="${trackUrl}" target="_blank">📍 Suivre</a>
@@ -596,9 +626,13 @@
           <button class="btn-finish">✓ Terminer</button>
           <button class="btn-delete-sm">🗑</button>
         </div>
+        ${currentRole === 'admin' ? '<button class="btn-transfer"> Transférer →</button>' : ''}
       `;
       card.querySelector('.btn-finish').onclick    = () => finishDelivery(d.id);
       card.querySelector('.btn-delete-sm').onclick = () => deleteDelivery(d.id);
+      if (currentRole === 'admin') {
+        card.querySelector('.btn-transfer').onclick = () => transferDelivery(d.id, d.clientName || 'Client');
+      }
       list.appendChild(card);
     });
   }
@@ -744,6 +778,65 @@
         db.ref('demandes/' + d.id).remove();
       }
     });
+  }
+
+  let _transferId = null;
+  let _selectedCourierId = null;
+  let _selectedCourierName = null;
+
+  function transferDelivery(id, clientName) {
+    _transferId = id;
+    _selectedCourierId = null;
+    _selectedCourierName = null;
+    document.getElementById('btnConfirmTransfer').disabled = true;
+    document.getElementById('transferModalSub').textContent = 'Livraison : ' + clientName;
+
+    const list = document.getElementById('courierList');
+    list.innerHTML = '<div style="color:#aaa;font-size:13px">Chargement...</div>';
+
+    db.ref('users').once('value', snap => {
+      const couriers = [];
+      snap.forEach(child => {
+        const u = child.val();
+        if (u.role === 'courier') couriers.push({ uid: child.key, ...u });
+      });
+
+      if (couriers.length === 0) {
+        list.innerHTML = '<div style="color:#aaa;font-size:13px">Aucun coursier trouvé</div>';
+        return;
+      }
+
+      list.innerHTML = '';
+      couriers.forEach(c => {
+        const div = document.createElement('div');
+        div.className = 'courier-option';
+        div.textContent = c.name || c.email || c.uid;
+        div.onclick = () => {
+          document.querySelectorAll('.courier-option').forEach(el => el.classList.remove('selected'));
+          div.classList.add('selected');
+          _selectedCourierId = c.uid;
+          _selectedCourierName = c.name || 'Coursier';
+          document.getElementById('btnConfirmTransfer').disabled = false;
+        };
+        list.appendChild(div);
+      });
+    });
+
+    document.getElementById('transferModal').classList.add('open');
+  }
+
+  function closeTransferModal() {
+    document.getElementById('transferModal').classList.remove('open');
+    _transferId = null; _selectedCourierId = null; _selectedCourierName = null;
+  }
+
+  function confirmTransfer() {
+    if (!_transferId || !_selectedCourierId) return;
+    db.ref('livraisons/' + _transferId).update({
+      courierId:   _selectedCourierId,
+      courierName: _selectedCourierName
+    });
+    closeTransferModal();
   }
 
 
