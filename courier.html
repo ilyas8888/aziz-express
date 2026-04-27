@@ -175,7 +175,10 @@
     <div class="dest-badge" id="destBadge">🏠 Destination : <span id="destLabel"></span></div>
     <div id="destMap"></div>
 
-    <button id="btnStart" onclick="startTracking()">Démarrer la livraison</button>
+      <button id="btnOpenApp" onclick="openApp()" style="display:none;background:#FF5A1F;color:white;margin-bottom:4px">
+         Ouvrir l'app GPS
+      </button>
+      <button id="btnStart" onclick="startTracking()">Démarrer la livraison</button>
     <button id="btnStop"  onclick="stopTracking()">Arrêter</button>
 
     <div class="alert-banner" id="alertBanner">
@@ -215,6 +218,13 @@
       let currentUid        = null;
       let currentName       = 'Coursier';
       let currentDeliveryId = null;
+      if (/android/i.test(navigator.userAgent)) {
+        document.getElementById('btnOpenApp').style.display = 'block';
+      }
+
+      function openApp() {
+        window.location.href = 'intent://open#Intent;scheme=azizgps;package=com.azizexpress.gps;end';
+      }
       let activeDeliveryRef = null;
       let courierIdRef      = null;
 
