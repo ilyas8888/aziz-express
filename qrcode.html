@@ -65,6 +65,29 @@
       text-align: center;
     }
 
+    .merchant-name {
+      font-size: 20px; font-weight: 700;
+      color: #0F172A; text-align: center;
+    }
+    .merchant-logo {
+      max-height: 80px; max-width: 200px;
+      object-fit: contain; border-radius: 8px;
+    }
+    .form-card {
+      background: white; border-radius: 16px;
+      padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      width: 100%;
+    }
+    .form-title { font-size: 14px; font-weight: 700; color: #0F172A; margin-bottom: 16px; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { font-size: 12px; color: #64748b; display: block; margin-bottom: 4px; }
+    .form-group input {
+      width: 100%; padding: 11px 14px; border-radius: 10px;
+      border: 1.5px solid #e2e8f0; font-size: 14px;
+      font-family: 'Poppins', sans-serif; outline: none;
+    }
+    .form-group input:focus { border-color: #FF5A1F; }
+
     .qr-frame {
       background: white;
       border: 3px solid #FF5A1F;
@@ -147,6 +170,7 @@
         color: #0F172A;
         margin-top: 12px;
       }
+      .form-card { display: none !important; }
     }
     .print-footer { display: none; }
   </style>
@@ -163,7 +187,9 @@
 
   <div class="page">
     <div class="card">
-      <div class="card-title">Scannez pour commander chez Aziz Express</div>
+      <img id="merchantLogo" class="merchant-logo" src="" style="display:none" />
+      <div id="merchantName" class="merchant-name" style="display:none"></div>
+      <div class="card-title" id="cardTitle">Scannez pour commander chez Aziz Express</div>
 
       <div class="qr-frame">
         <div id="qr-canvas"></div>
@@ -171,7 +197,7 @@
 
       <div class="url-label" id="order-url"></div>
 
-      <div class="print-footer">
+      <div class="print-footer" id="printFooter">
         Scannez ce QR code pour passer une commande — Aziz Express
       </div>
     </div>
@@ -185,6 +211,17 @@
       </p>
     </div>
 
+    <div class="form-card">
+      <div class="form-title"> Commerce partenaire (optionnel)</div>
+      <div class="form-group">
+        <label>Nom du commerce</label>
+        <input id="inputCommerce" type="text" placeholder="Ex: Boulangerie Hassan" oninput="updateCard()" />
+      </div>
+      <div class="form-group">
+        <label>Logo URL (optionnel)</label>
+        <input id="inputLogo" type="url" placeholder="https://..." oninput="updateCard()" />
+      </div>
+    </div>
     <button class="btn-print" onclick="window.print()">🖨️ Imprimer le QR Code</button>
   </div>
 </div>
@@ -218,6 +255,34 @@
       correctLevel: QRCode.CorrectLevel.H
     });
   });
+
+  function updateCard() {
+    const name = document.getElementById('inputCommerce').value.trim();
+    const logo = document.getElementById('inputLogo').value.trim();
+
+    const nameEl  = document.getElementById('merchantName');
+    const logoEl  = document.getElementById('merchantLogo');
+    const titleEl = document.getElementById('cardTitle');
+    const footerEl = document.getElementById('printFooter');
+
+    if (name) {
+      nameEl.textContent    = name;
+      nameEl.style.display  = 'block';
+      titleEl.textContent   = 'Scannez pour commander chez ' + name;
+      footerEl.textContent  = name + ' × Aziz Express';
+    } else {
+      nameEl.style.display  = 'none';
+      titleEl.textContent   = 'Scannez pour commander chez Aziz Express';
+      footerEl.textContent  = 'Scannez ce QR code pour passer une commande — Aziz Express';
+    }
+
+    if (logo) {
+      logoEl.src            = logo;
+      logoEl.style.display  = 'block';
+    } else {
+      logoEl.style.display  = 'none';
+    }
+  }
 </script>
 </body>
 </html>
