@@ -404,7 +404,7 @@
         });
         courierIdRef = db.ref('livraisons/' + currentDeliveryId + '/courierId');
         courierIdRef.on('value', snap => {
-          if (snap.val() !== currentUid && isTracking) stopTracking();
+          if (snap.val() !== currentUid && isTracking) stopTracking(false);
         });
 
         // Auto-enregistrer le client dans contacts s'il n'existe pas encore
@@ -442,12 +442,12 @@
         );
       }
 
-      function stopTracking() {
+      function stopTracking(writeToFirebase = true) {
         isTracking = false;
         if (activeDeliveryRef) { activeDeliveryRef.off(); activeDeliveryRef = null; }
         if (courierIdRef) { courierIdRef.off(); courierIdRef = null; }
         if (watchId) navigator.geolocation.clearWatch(watchId);
-        if (currentDeliveryId) {
+        if (writeToFirebase && currentDeliveryId) {
           db.ref("livraisons/" + currentDeliveryId).update({
             active: false,
             completedAt: Date.now()
