@@ -215,6 +215,7 @@
       let currentUid        = null;
       let currentName       = 'Coursier';
       let currentDeliveryId = null;
+      let activeDeliveryRef = null;
 
       firebase.auth().onAuthStateChanged(user => {
         if (!user) { window.location.href = BASE + 'login.html'; return; }
@@ -395,6 +396,11 @@
           deliveryData.destLng = destLng;
         }
         db.ref("livraisons/" + currentDeliveryId).update(deliveryData);
+        // Arrêt depuis app Android ou dashboard
+        activeDeliveryRef = db.ref('livraisons/' + currentDeliveryId + '/active');
+        activeDeliveryRef.on('value', snap => {
+          if (snap.val() === false && isTracking) stopTracking();
+        });
 
         // Auto-enregistrer le client dans contacts s'il n'existe pas encore
         const selectedVal = document.getElementById('contactSelect').value;
@@ -433,6 +439,7 @@
 
       function stopTracking() {
         isTracking = false;
+        if (activeDeliveryRef) { activeDeliveryRef.off(); activeDeliveryRef = null; }
         if (watchId) navigator.geolocation.clearWatch(watchId);
         if (currentDeliveryId) {
           db.ref("livraisons/" + currentDeliveryId).update({
@@ -440,10 +447,15 @@
             completedAt: Date.now()
           });
         }
-        document.getElementById("btnStart").style.display = "block";
-        document.getElementById("btnStop").style.display  = "none";
+        document.getElementById("btnStart").style.display      = "block";
+        document.getElementById("btnStop").style.display       = "none";
         document.getElementById("alertBanner").classList.remove("show");
         document.getElementById("status").textContent     = "Livraison terminée.";
+        document.getElementById("clientName").disabled         = false;
+        document.getElementById("clientPhone").disabled        = false;
+        document.getElementById("contactSelect").disabled      = false;
+        document.getElementById("linkBox").style.display       = "none";
+        document.getElementById("status").textContent          = "Livraison terminée.";
         currentDeliveryId = null;
       }
     </script>
