@@ -189,6 +189,8 @@
     <div class="card">
       <img id="merchantLogo" class="merchant-logo" src="" style="display:none" />
       <div id="merchantName" class="merchant-name" style="display:none"></div>
+      <div id="merchantPhone" style="display:none; font-size:14px; color:#64748b; text-align:center;">
+      </div>
       <div class="card-title" id="cardTitle">Scannez pour commander chez Aziz Express</div>
 
       <div class="qr-frame">
@@ -220,6 +222,10 @@
       <div class="form-group">
         <label>Logo URL (optionnel)</label>
         <input id="inputLogo" type="url" placeholder="https://..." oninput="updateCard()" />
+      </div>
+      <div class="form-group">
+        <label>Téléphone</label>
+        <input id="inputPhone" type="tel" placeholder="Ex: 0612345678" oninput="updateCard()" />
       </div>
     </div>
     <button class="btn-print" onclick="window.print()">🖨️ Imprimer le QR Code</button>
@@ -259,6 +265,8 @@
   function updateCard() {
     const name = document.getElementById('inputCommerce').value.trim();
     const logo = document.getElementById('inputLogo').value.trim();
+    const phone   = document.getElementById('inputPhone').value.trim();
+    const phoneEl = document.getElementById('merchantPhone');
 
     const nameEl  = document.getElementById('merchantName');
     const logoEl  = document.getElementById('merchantLogo');
@@ -274,6 +282,13 @@
       nameEl.style.display  = 'none';
       titleEl.textContent   = 'Scannez pour commander chez Aziz Express';
       footerEl.textContent  = 'Scannez ce QR code pour passer une commande — Aziz Express';
+    }
+
+    if (phone) {
+      phoneEl.textContent   = ' ' + phone;
+      phoneEl.style.display = 'block';
+    } else {
+      phoneEl.style.display = 'none';
     }
 
     if (logo) {
