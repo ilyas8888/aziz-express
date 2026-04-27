@@ -18,10 +18,11 @@
 
   - **Commande publique** — formulaire client avec estimation des frais, annulation 60s, envoi WhatsApp automatique
   - **Tracking GPS temps réel** — position du coursier mise à jour toutes les 5s via Firebase
-  - **Dashboard admin** — gestion des demandes, livraisons en cours, stats financières
+- **App Android avec mini-carte** — position live, destination active, itinéraire OSRM, deep link `azizgps://` et prompt de mise à jour
+- **Dashboard admin** — gestion des demandes, livraisons en cours, stats financières et transfert multi-coursiers
   - **Historique filtré par rôle** — admin voit tout, coursier voit seulement les siennes
   - **Stats & graphiques** — bénéfice/livraisons sur 7j/30j/tout, top clients (Chart.js)
-  - **QR Code imprimable** — pour marketing terrain chez les commerçants partenaires
+  - **QR Code imprimable** — avec branding commerce optionnel (nom, logo, téléphone)
   - **Gestion multi-coursiers** — création/suppression de comptes coursiers
   - **App Android native** — GPS en foreground service, fonctionne écran verrouillé
 

@@ -39,7 +39,7 @@ Aziz gagne via frais livraison + 20% des marchands.
 | order.html | Formulaire public : save Firebase + WhatsApp + annulation 60s + estimation frais |
 | contacts.html | Liste contacts Firebase avec épinglage position |
 | stats.html | KPIs, graphiques 7j/30j/tout, top clients (Chart.js) |
-| qrcode.html | QR Code vers order.html, imprimable, admin seulement |
+| qrcode.html | QR Code vers order.html, imprimable, admin seulement, avec branding partenaire optionnel |
 | admin-couriers.html | Créer/supprimer comptes coursiers (secondary Firebase app) |
 | firebase-config.js | Firebase init + db |
 
@@ -78,6 +78,11 @@ Aziz gagne via frais livraison + 20% des marchands.
 - Login Firebase email/password ajouté avant accès à l'app
 - MainActivity filtre maintenant les livraisons actives par `courierId == uid`
 - Bouton notification `Arrêter` corrigé : action `STOP` gérée dans `GpsService`
+- Intégration OSMDroid ajoutée dans `MainActivity` avec mini-carte `180dp`, marqueur coursier, marqueur destination et tracé d'itinéraire comme `courier.html`
+- Itinéraire Android : route OSRM orange avec fallback en ligne droite, cadrage automatique sur coursier + destination
+- `MainActivity` vérifie `_config/version` + `_config/apkUrl` et propose une mise à jour via navigateur
+- Deep link `azizgps://` déclaré dans `AndroidManifest`
+- Notification locale vibration + son uniquement pour livraisons `assignedByAdmin: true`
 - **Déploiement :** Build → Build APK → envoyer via WhatsApp à Aziz
 - **Permissions téléphone Aziz :** Localisation → "Autoriser en permanence" + Batterie → "Non restreinte"
 
@@ -97,6 +102,8 @@ Aziz gagne via frais livraison + 20% des marchands.
 - App Android choisie (pas React Native/Flutter) — plus légère, GPS natif
 - Filtre historique côté JS (pas Firebase rules) — acceptable car coursiers de confiance
 - BASE path detection pour GitHub Pages subdirectory
+- Mises à jour Android : ouverture navigateur sur `apkUrl` préférée à l'installation in-app pour réduire les frictions Android
+- Sonnerie/vibration Android réservée aux livraisons assignées par admin via `assignedByAdmin`
 
 ---
 
@@ -106,13 +113,13 @@ Aziz gagne via frais livraison + 20% des marchands.
 - App Android : démarrage GPS automatique dès qu'une livraison active est détectée
 - App Android : bouton notification `Arrêter` fonctionne désormais
 - App Android : bug futur multi-coursier corrigé via authentification Firebase + filtre `courierId == uid`
+- `courier.html` s'arrête maintenant aussi si `active` passe à `false` ou si `courierId` change après transfert
+- `stopTracking(false)` évite de terminer la livraison lors d'un transfert multi-coursier
 
 ---
 
 ## Ce qui reste à faire
 - Tester en conditions réelles (checklist complète)
-- Multi-courier : push livraison d'un livreur à un autre
-- QR Code : ajouter nom/logo du commerce partenaire
 - Sécurité historique : restructurer livraisons/{courierId}/{id} pour vrai filtre Firebase
 
 ---
@@ -132,3 +139,7 @@ Aziz gagne via frais livraison + 20% des marchands.
 <!-- [YYYY-MM-DD ChatGPT] -->
 [2026-04-22 ChatGPT] Session started. Read AGENTS.md and SHARED_MEMORY.md. Ready to assist on Aziz Express project.
 [2026-04-22 ChatGPT] Updated shared memory after confirmed Android fixes: notification STOP action handled, LoginActivity added, active deliveries filtered by courierId == uid, and next manual step is Sync Gradle then Build APK in Android Studio.
+[2026-04-24 ChatGPT] Updated AzizGPS Android app to add OSMDroid mini-map support. `app/build.gradle.kts` now includes `org.osmdroid:osmdroid-android:6.1.18`; `activity_main.xml` now includes a compact `180dp` `MapView`; `MainActivity.kt` initializes the map, tracks live courier position, shows active delivery destination from Firebase, and draws an OSRM route with straight-line fallback matching the mini-map behavior from `courier.html`.
+[2026-04-27 ChatGPT] Added multi-courier transfer flow in `dashboard.html` with admin-only transfer modal and `assignedByAdmin: true` tagging. `courier.html` now reacts to `active` and `courierId` changes so transfers stop the old courier UI without closing the delivery, and shows an Android-only "Ouvrir l'app GPS" button.
+[2026-04-27 ChatGPT] Updated `qrcode.html` with optional partner branding: commerce name, logo, phone, and a compact print-only card layout.
+[2026-04-27 ChatGPT] Updated AzizGPS Android app with `azizgps://` deep link, Firebase-driven update prompt via browser download, and local vibration/ringtone alerts only for admin-assigned deliveries.
