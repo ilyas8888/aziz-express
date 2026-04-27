@@ -752,15 +752,16 @@
   function acceptDemande(d) {
     const deliveryId = 'livraison_' + Date.now();
     db.ref('livraisons/' + deliveryId).set({
-      active:       true,
-      clientName:   d.clientName,
-      clientPhone:  d.clientPhone,
-      details:      d.details || '',
-      destLat:      d.lat  || null,
-      destLng:      d.lng  || null,
-      createdAt:    Date.now(),
-      courierId:    currentUid,
-      courierName:  currentName
+      active:          true,
+      assignedByAdmin: true,
+      clientName:      d.clientName,
+      clientPhone:     d.clientPhone,
+      details:         d.details || '',
+      destLat:         d.lat  || null,
+      destLng:         d.lng  || null,
+      createdAt:       Date.now(),
+      courierId:       currentUid,
+      courierName:     currentName
     });
     db.ref('demandes/' + d.id).remove();
   }
@@ -833,8 +834,9 @@
   function confirmTransfer() {
     if (!_transferId || !_selectedCourierId) return;
     db.ref('livraisons/' + _transferId).update({
-      courierId:   _selectedCourierId,
-      courierName: _selectedCourierName
+      courierId:       _selectedCourierId,
+      courierName:     _selectedCourierName,
+      assignedByAdmin: true
     });
     closeTransferModal();
   }
