@@ -153,24 +153,29 @@
 
     /* Print styles */
     @media print {
-      header, .instructions, .btn-print, .url-label { display: none !important; }
-      body { background: white; }
-      .page { padding: 0; margin: 0; }
+      header, .instructions, .btn-print, .url-label, .form-card { display: none !important; }
+      body { background: white; margin: 0; }
+      .page { padding: 0; margin: 0; align-items: center; justify-content: center; min-height: 0; gap: 0; }
       .card {
+        width: 220px;
+        padding: 16px;
+        border: 2px solid #FF5A1F;
+        border-radius: 16px;
         box-shadow: none;
-        border: none;
-        padding: 0;
+        gap: 10px;
+        margin: 20px auto;
       }
-      .qr-frame { border-color: #FF5A1F; }
-      .card-title { display: block !important; font-size: 18px; margin-bottom: 8px; }
+      .merchant-logo { max-height: 50px; }
+      .merchant-name { font-size: 14px; }
+      #merchantPhone { font-size: 11px !important; }
+      #cardTitle { font-size: 11px; color: #64748b; }
+      .qr-frame { padding: 8px; border-width: 2px; }
       .print-footer {
         display: block !important;
+        font-size: 10px;
+        color: #64748b;
         text-align: center;
-        font-size: 13px;
-        color: #0F172A;
-        margin-top: 12px;
       }
-      .form-card { display: none !important; }
     }
     .print-footer { display: none; }
   </style>
