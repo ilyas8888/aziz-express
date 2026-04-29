@@ -346,13 +346,10 @@
       document.getElementById('distVal').textContent = '—';
       document.getElementById('etaVal').textContent  = '—';
       if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
-    } else {
-      document.getElementById('statusText').textContent = '🛵 En route vers vous';
-    }
-    if (data.active && hasPos && data.lastLocationAt && (Date.now() - data.lastLocationAt) < 30000) {
+    } else if (hasPos && data.lastLocationAt && (Date.now() - data.lastLocationAt) < 30000) {
       deliveryActive = true;
       document.getElementById('pulseDot').className = 'pulse-dot';
-      document.getElementById('statusText').textContent = 'En route vers vous';
+      document.getElementById('statusText').textContent = '?? En route vers vous';
     }
   });
 </script>
