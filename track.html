@@ -72,6 +72,7 @@
     }
 
     .pulse-dot.done { background: #22c55e; animation: none; }
+    .pulse-dot.warn { background: #f59e0b; animation: none; }
 
     @keyframes pulse {
       0%   { box-shadow: 0 0 0 0 rgba(255,90,31,0.5); }
@@ -223,7 +224,7 @@
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
   const courierIcon = L.divIcon({
-    html: `<div style="font-size:36px;filter:drop-shadow(2px 2px 4px rgba(0,0,0,0.4))">🛵</div>`,
+    html: `<div style="font-size:36px;filter:drop-shadow(2px 2px 4px rgba(0,0,0,0.4))">&#128757;</div>`,
     iconSize: [40, 40], className: ''
   });
 
@@ -274,6 +275,24 @@
       });
   }
 
+  let lastLocationAt = null;
+  let deliveryActive = true;
+
+  setInterval(() => {
+    if (!deliveryActive || !lastLocationAt) return;
+    const stale = (Date.now() - lastLocationAt) > 30000;
+    const dot  = document.getElementById('pulseDot');
+    const text = document.getElementById('statusText');
+    if (stale) {
+      dot.className = 'pulse-dot warn';
+      text.textContent = '⚠️ GPS momentanément indisponible';
+    } else {
+      deliveryActive = true;
+      dot.className = 'pulse-dot';
+      text.textContent = '🛵 En route vers vous';
+    }
+  }, 10000);
+
   db.ref('livraisons/' + deliveryId).on('value', snap => {
     const data = snap.val();
     if (!data) return;
@@ -315,9 +334,13 @@
       map.setView(pos, 15);
     }
 
+    // Staleness tracking
+    if (data.lastLocationAt) lastLocationAt = data.lastLocationAt;
+
     // Statut
     if (!data.active) {
-      document.getElementById('pulseDot').classList.add('done');
+      deliveryActive = false;
+      document.getElementById('pulseDot').className = 'pulse-dot done';
       document.getElementById('statusText').textContent = 'Livraison terminée';
       document.getElementById('finishedBanner').style.display = 'block';
       document.getElementById('distVal').textContent = '—';
@@ -325,6 +348,11 @@
       if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
     } else {
       document.getElementById('statusText').textContent = '🛵 En route vers vous';
+    }
+    if (data.active && hasPos && data.lastLocationAt && (Date.now() - data.lastLocationAt) < 30000) {
+      deliveryActive = true;
+      document.getElementById('pulseDot').className = 'pulse-dot';
+      document.getElementById('statusText').textContent = 'En route vers vous';
     }
   });
 </script>
