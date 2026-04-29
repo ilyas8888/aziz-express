@@ -211,6 +211,7 @@
 
 
       let watchId           = null;
+      let gpsRetryTimeout   = null;
       let previewWatchId    = null;
       let destLat           = null;
       let destLng           = null;
@@ -361,6 +362,34 @@
         }
       }
 
+      function startGpsWatch() {
+        if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+        watchId = navigator.geolocation.watchPosition(
+          pos => {
+            if (gpsRetryTimeout) { clearTimeout(gpsRetryTimeout); gpsRetryTimeout = null; }
+            const { latitude, longitude } = pos.coords;
+            if (!currentDeliveryId) return;
+            db.ref("livraisons/" + currentDeliveryId).update({
+              lat: latitude,
+              lng: longitude,
+              lastLocationAt: Date.now()
+            });
+            document.getElementById("status").textContent =
+              `Position envoyée : ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+          },
+          err => {
+            document.getElementById("status").textContent =
+              "⚠️ GPS indisponible — réessai dans 5s...";
+            if (isTracking) {
+              gpsRetryTimeout = setTimeout(() => {
+                if (isTracking) startGpsWatch();
+              }, 5000);
+            }
+          },
+          { enableHighAccuracy: true, maximumAge: 3000 }
+        );
+      }
+
       function startTracking() {
         if (!navigator.geolocation) {
           document.getElementById("status").textContent = "GPS non supporté";
@@ -433,30 +462,15 @@
           });
         }
 
-        watchId = navigator.geolocation.watchPosition(
-          pos => {
-            const { latitude, longitude } = pos.coords;
-            if (!currentDeliveryId) return;
-            db.ref("livraisons/" + currentDeliveryId).update({
-              lat: latitude,
-              lng: longitude,
-              lastLocationAt: Date.now()
-            });
-            document.getElementById("status").textContent =
-              `Position envoyée : ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
-          },
-          err => {
-            document.getElementById("status").textContent = "Erreur GPS : " + err.message;
-          },
-          { enableHighAccuracy: true, maximumAge: 3000 }
-        );
+        startGpsWatch();
       }
 
       function stopTracking(writeToFirebase = true) {
         isTracking = false;
         if (activeDeliveryRef) { activeDeliveryRef.off(); activeDeliveryRef = null; }
         if (courierIdRef) { courierIdRef.off(); courierIdRef = null; }
-        if (watchId) navigator.geolocation.clearWatch(watchId);
+        if (gpsRetryTimeout) { clearTimeout(gpsRetryTimeout); gpsRetryTimeout = null; }
+        if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; }
         if (writeToFirebase && currentDeliveryId) {
           db.ref("livraisons/" + currentDeliveryId).update({
             active: false,
