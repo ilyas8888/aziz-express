@@ -99,9 +99,26 @@
       padding: 14px 16px 8px;
     }
 
-    .section-header h2 { font-size: 14px; font-weight: bold; color: #444; text-transform: uppercase; letter-spacing: 0.5px; }
-    .section-header .count { background: #0F172A; color: white; font-size: 11px; font-weight: bold; padding: 2px 8px; border-radius: 20px; }
+    .section-header h2 { font-size: 14px; font-weight: bold; color: #444; text-transform: uppercase; letter-spacing: 0.5px; transition: color 0.3s; }
+    .section-header .count { background: #0F172A; color: white; font-size: 11px; font-weight: bold; padding: 2px 8px; border-radius: 20px; transition: background 0.3s; }
     .section-header .count.zero { background: #ccc; }
+
+    @keyframes pulse-amber {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(245,158,11,0.5); }
+      60% { transform: scale(1.2); box-shadow: 0 0 0 8px rgba(245,158,11,0); }
+    }
+    .count.pulse {
+      background: #f59e0b !important;
+      animation: pulse-amber 1.4s ease-in-out infinite;
+    }
+    .section-header.has-demandes h2 { color: #d97706; }
+
+    /* Touch targets minimum 48px */
+    .btn-accept, .btn-refuse, .btn-finish,
+    .btn-wa, .btn-track, .btn-delete-sm, .btn-transfer {
+      min-height: 48px;
+      display: flex; align-items: center; justify-content: center;
+    }
 
     .deliveries { padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
 
@@ -142,9 +159,17 @@
 
     .active-actions-2 {
       display: grid;
-      grid-template-columns: 1fr auto;
+      grid-template-columns: 1fr auto auto;
       gap: 8px;
       margin-top: 8px;
+    }
+
+    .btn-print-sm {
+      background: #f8fafc; color: #64748b;
+      border: 1px solid #e2e8f0; border-radius: 10px;
+      padding: 10px 14px; font-size: 16px;
+      cursor: pointer; min-height: 48px;
+      display: flex; align-items: center; justify-content: center;
     }
 
     .btn-finish {
@@ -183,8 +208,8 @@
     .card-demande {
       background: white;
       border-radius: 16px;
-      padding: 16px 18px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+      padding: 18px;
+      box-shadow: 0 4px 16px rgba(245,158,11,0.12);
       border-left: 4px solid #f59e0b;
     }
 
@@ -301,6 +326,22 @@
       border-left: 4px solid #0F172A;
     }
 
+    .courier-greeting {
+      margin: 10px 16px 0;
+      padding: 14px 16px;
+      background: linear-gradient(135deg, #0F172A, #1e293b);
+      border-radius: 14px;
+      color: white;
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .courier-greeting .sub {
+      font-size: 12px;
+      font-weight: 400;
+      opacity: 0.65;
+      margin-top: 3px;
+    }
+
     /* MODAL FRAIS */
     .modal-overlay {
       display: none;
@@ -403,13 +444,17 @@
     <div class="number" id="statToday">-</div>
     <div class="label">Aujourd'hui</div>
   </div>
-  <div class="stat-card clickable" onclick="window.location.href='history.html'">
+  <div class="stat-card clickable" id="statTotalCard" onclick="window.location.href='history.html'">
     <div class="number" id="statTotal">-</div>
-    <div class="label">Total →</div>
+    <div class="label" id="statTotalLabel">Total →</div>
   </div>
 </div>
 
 <a href="admin-couriers.html" class="admin-link" id="adminPanel">👥 Gérer les coursiers →</a>
+<div class="courier-greeting" id="courierGreeting" style="display:none">
+  <div id="courierGreetName"></div>
+  <div class="sub" id="courierGreetSub"></div>
+</div>
 
 <!-- DEMANDES -->
 <div id="demandeSection">
@@ -510,6 +555,26 @@
   let allDemandes   = [];
   const TWELVE_HOURS = 12 * 60 * 60 * 1000;
 
+  let knownDemandeIds = null; // null = premier chargement pas encore fait
+
+  function requestNotifPermission() {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }
+
+  function notifyNewDemande(d) {
+    navigator.vibrate && navigator.vibrate([200, 100, 200]);
+    setTimeout(() => document.getElementById('demandeSection').scrollIntoView({ behavior: 'smooth' }), 400);
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    const notif = new Notification('📬 Nouvelle demande — Aziz Express', {
+      body: (d.clientName || 'Client') + (d.details ? ' · ' + d.details : '') + (d.time && d.time !== 'Dès que possible' ? ' · ' + d.time : ''),
+      tag: 'demande-' + d.id,
+      renotify: true
+    });
+    notif.onclick = () => { window.focus(); notif.close(); };
+  }
+
   document.getElementById('headerDate').textContent =
     new Date().toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
 
@@ -534,6 +599,16 @@
     if (currentRole === 'courier') {
       document.getElementById('demandeSection').style.display = 'none';
       document.getElementById('adminPanel').style.display     = 'none';
+
+      document.getElementById('courierGreeting').style.display = 'block';
+      document.getElementById('courierGreetName').textContent  = 'Bonjour ' + currentName + ' 👋';
+
+      const card = document.getElementById('statTotalCard');
+      card.classList.remove('clickable');
+      card.removeAttribute('onclick');
+      document.getElementById('statTotalLabel').textContent = 'Bénéf DH';
+    } else {
+      requestNotifPermission();
     }
 
     db.ref('livraisons').on('value', snap => {
@@ -547,9 +622,20 @@
 
     db.ref('demandes').on('value', snap => {
       const data = snap.val() || {};
-      allDemandes = Object.entries(data)
-        .map(([id, v]) => ({ id, ...v }))
-        .sort((a, b) => getCreatedAt(b) - getCreatedAt(a));
+      const demandes = Object.entries(data).map(([id, v]) => ({ id, ...v }));
+
+      if (knownDemandeIds === null) {
+        knownDemandeIds = new Set(demandes.map(d => d.id));
+      } else {
+        demandes.forEach(d => {
+          if (!knownDemandeIds.has(d.id) && d.status === 'pending') {
+            notifyNewDemande(d);
+          }
+          knownDemandeIds.add(d.id);
+        });
+      }
+
+      allDemandes = demandes.sort((a, b) => getCreatedAt(b) - getCreatedAt(a));
       cleanOldDemandes(allDemandes);
       renderDemandes();
     });
@@ -599,7 +685,17 @@
 
     document.getElementById('statActive').textContent = allDeliveries.filter(d => d.active).length;
     document.getElementById('statToday').textContent  = allDeliveries.filter(d => isToday(getCreatedAt(d))).length;
-    document.getElementById('statTotal').textContent  = allDeliveries.length;
+
+    if (currentRole === 'courier') {
+      const todayBenef = allDeliveries
+        .filter(d => !d.active && isToday(getCompletedAt(d)))
+        .reduce((sum, d) => sum + (d.benefice || 0), 0);
+      document.getElementById('statTotal').textContent = todayBenef > 0 ? todayBenef.toFixed(0) : '0';
+      document.getElementById('courierGreetSub').textContent =
+        allDeliveries.filter(d => isToday(getCreatedAt(d))).length + ' livraison(s) aujourd\'hui';
+    } else {
+      document.getElementById('statTotal').textContent = allDeliveries.length;
+    }
 
     const list = document.getElementById('activeList');
     list.innerHTML = '';
@@ -624,11 +720,13 @@
         </div>
         <div class="active-actions-2">
           <button class="btn-finish">✓ Terminer</button>
+          <button class="btn-print-sm" title="Imprimer bon">🖨️</button>
           <button class="btn-delete-sm">🗑</button>
         </div>
         ${currentRole === 'admin' ? '<button class="btn-transfer"> Transférer →</button>' : ''}
       `;
       card.querySelector('.btn-finish').onclick    = () => finishDelivery(d.id);
+      card.querySelector('.btn-print-sm').onclick  = () => printDelivery(d);
       card.querySelector('.btn-delete-sm').onclick = () => deleteDelivery(d.id);
       if (currentRole === 'admin') {
         card.querySelector('.btn-transfer').onclick = () => transferDelivery(d.id, d.clientName || 'Client');
@@ -705,14 +803,81 @@
     db.ref('livraisons/' + id).remove();
   }
 
+  function printDelivery(d) {
+    const trackUrl = window.location.href.replace(/[^/]*$/, '') + 'track.html?id=' + d.id;
+    const qrUrl    = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' + encodeURIComponent(trackUrl);
+    const date     = d.createdAt
+      ? new Date(d.createdAt).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+      : '—';
+
+    const html = `<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="UTF-8">
+<title>Bon de livraison — ${d.clientName || 'Client'}</title>
+<style>
+  @page { size: A5; margin: 12mm; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: Arial, sans-serif; font-size: 13px; color: #111; }
+  .header { text-align:center; padding-bottom:12px; border-bottom:2px solid #FF5A1F; margin-bottom:12px; }
+  .brand  { font-size:22px; font-weight:900; color:#FF5A1F; }
+  .sub    { font-size:11px; color:#888; margin-top:2px; }
+  .section{ margin-bottom:10px; padding-bottom:10px; border-bottom:1px dashed #e2e8f0; }
+  .row    { display:flex; justify-content:space-between; margin-bottom:5px; align-items:baseline; }
+  .lbl    { color:#666; font-size:11px; }
+  .val    { font-weight:600; }
+  .qr-row { display:flex; gap:14px; align-items:center; margin:10px 0; }
+  .qr-row img { width:110px; height:110px; border:1px solid #eee; border-radius:6px; }
+  .qr-text { font-size:10px; color:#666; line-height:1.7; }
+  .qr-text a { color:#FF5A1F; word-break:break-all; font-size:9px; }
+  .benef  { background:#FFF5F0; border-radius:6px; padding:7px 10px; }
+  .benef .val { font-size:15px; color:#FF5A1F; }
+  .footer { text-align:center; font-size:10px; color:#bbb; margin-top:12px; }
+</style></head><body>
+<div class="header">
+  <div class="brand">🛵 Aziz Express</div>
+  <div class="sub">Livraison rapide — Oujda &nbsp;·&nbsp; +212 616 937 149</div>
+</div>
+<div class="section">
+  <div class="row"><span class="lbl">Client</span><span class="val">${d.clientName || '—'}</span></div>
+  ${d.clientPhone ? `<div class="row"><span class="lbl">Téléphone</span><span class="val">${d.clientPhone}</span></div>` : ''}
+  <div class="row"><span class="lbl">Date</span><span class="val">${date}</span></div>
+  ${d.courierName ? `<div class="row"><span class="lbl">Coursier</span><span class="val">${d.courierName}</span></div>` : ''}
+  ${d.details ? `<div class="row"><span class="lbl">Détails</span><span class="val" style="max-width:60%;text-align:right">${d.details}</span></div>` : ''}
+</div>
+${(d.fraisClient || d.prixArticle) ? `
+<div class="section">
+  ${d.prixArticle ? `<div class="row"><span class="lbl">Prix article</span><span class="val">${d.prixArticle} DH</span></div>` : ''}
+  ${d.remise      ? `<div class="row"><span class="lbl">Remise</span><span class="val">${d.remise}%</span></div>` : ''}
+  ${d.fraisClient ? `<div class="row"><span class="lbl">Frais livraison</span><span class="val">${d.fraisClient} DH</span></div>` : ''}
+  ${d.benefice    ? `<div class="row benef"><span class="lbl">Bénéfice net</span><span class="val">${parseFloat(d.benefice).toFixed(0)} DH</span></div>` : ''}
+</div>` : ''}
+<div class="qr-row">
+  <img src="${qrUrl}" alt="QR suivi" />
+  <div class="qr-text">
+    <strong>Suivre cette livraison :</strong><br/>
+    Scannez le QR code<br/>ou ouvrez le lien :<br/>
+    <a href="${trackUrl}">${trackUrl}</a>
+  </div>
+</div>
+<div class="footer">Bon généré le ${new Date().toLocaleDateString('fr-FR')} · Aziz Express Oujda</div>
+<script>window.onload = () => window.print();<\/script>
+</body></html>`;
+
+    const win = window.open('', '_blank', 'width=600,height=820');
+    if (win) { win.document.write(html); win.document.close(); }
+  }
+
   function renderDemandes() {
     const now  = Date.now();
     const list = document.getElementById('demandeList');
     list.innerHTML = '';
 
     const pending = allDemandes.filter(d => d.status === 'pending');
-    document.getElementById('demandeCount').textContent  = pending.length;
-    document.getElementById('demandeCount').className    = 'count' + (pending.length === 0 ? ' zero' : '');
+    const countEl = document.getElementById('demandeCount');
+    const headerEl = document.querySelector('#demandeSection .section-header');
+    countEl.textContent = pending.length;
+    countEl.className   = 'count' + (pending.length === 0 ? ' zero' : ' pulse');
+    headerEl.classList.toggle('has-demandes', pending.length > 0);
 
     if (pending.length === 0) {
       list.innerHTML = `<div class="empty" style="padding:16px 20px"><div class="icon" style="font-size:28px">📭</div>Aucune demande en attente</div>`;

@@ -134,6 +134,20 @@
       }
       .alert-banner.show { display: block; }
 
+      .offline-banner {
+        display: none;
+        width: 100%;
+        max-width: 320px;
+        background: #1e293b;
+        color: #e2e8f0;
+        border-radius: 12px;
+        padding: 12px 14px;
+        font-size: 13px;
+        margin: 6px 0;
+        text-align: center;
+        line-height: 1.6;
+      }
+
       .nav-links {
         display: flex;
         gap: 20px;
@@ -187,6 +201,11 @@
       Gardez cette page ouverte pendant toute la livraison.
     </div>
 
+    <div class="offline-banner" id="offlineBanner">
+      📡 Hors ligne — GPS toujours actif<br>
+      Position envoyée à la reconnexion
+    </div>
+
     <p id="status">En attente...</p>
 
     <div id="linkBox">
@@ -219,6 +238,8 @@
       let currentUid        = null;
       let currentName       = 'Coursier';
       let currentDeliveryId = null;
+      let isOnline          = true;
+      let pendingPosition   = null;
       if (/android/i.test(navigator.userAgent)) {
         document.getElementById('btnOpenApp').style.display = 'block';
       }
@@ -236,6 +257,20 @@
           const d = snap.val();
           if (d && d.name) currentName = d.name;
         });
+      });
+
+      db.ref('.info/connected').on('value', snap => {
+        isOnline = snap.val() === true;
+        document.getElementById('offlineBanner').style.display = (!isOnline && isTracking) ? 'block' : 'none';
+        if (isOnline && pendingPosition && currentDeliveryId) {
+          db.ref("livraisons/" + currentDeliveryId).update({
+            lat: pendingPosition.lat,
+            lng: pendingPosition.lng,
+            lastLocationAt: pendingPosition.ts
+          });
+          pendingPosition = null;
+          document.getElementById("status").textContent = "Position synchronisée ✓";
+        }
       });
 
       // Empêcher fermeture accidentelle pendant livraison
@@ -369,13 +404,20 @@
             if (gpsRetryTimeout) { clearTimeout(gpsRetryTimeout); gpsRetryTimeout = null; }
             const { latitude, longitude } = pos.coords;
             if (!currentDeliveryId) return;
-            db.ref("livraisons/" + currentDeliveryId).update({
-              lat: latitude,
-              lng: longitude,
-              lastLocationAt: Date.now()
-            });
-            document.getElementById("status").textContent =
-              `Position envoyée : ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+            if (isOnline) {
+              db.ref("livraisons/" + currentDeliveryId).update({
+                lat: latitude,
+                lng: longitude,
+                lastLocationAt: Date.now()
+              });
+              pendingPosition = null;
+              document.getElementById("status").textContent =
+                `Position envoyée : ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+            } else {
+              pendingPosition = { lat: latitude, lng: longitude, ts: Date.now() };
+              document.getElementById("status").textContent =
+                `📡 GPS actif (hors-ligne) · ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+            }
           },
           err => {
             document.getElementById("status").textContent =
@@ -408,6 +450,7 @@
         document.getElementById("contactSelect").disabled        = true;
         document.getElementById("status").textContent            = "GPS actif...";
         document.getElementById("alertBanner").classList.add("show");
+        if (!isOnline) document.getElementById("offlineBanner").style.display = 'block';
 
         const trackUrl = window.location.href.replace(/[^/]*$/, '') + 'track.html?id=' + currentDeliveryId;
 
@@ -480,6 +523,8 @@
         document.getElementById("btnStart").style.display      = "block";
         document.getElementById("btnStop").style.display       = "none";
         document.getElementById("alertBanner").classList.remove("show");
+        document.getElementById("offlineBanner").style.display = 'none';
+        pendingPosition = null;
         document.getElementById("status").textContent     = "Livraison terminée.";
         document.getElementById("clientName").disabled         = false;
         document.getElementById("clientPhone").disabled        = false;
