@@ -560,9 +560,12 @@
 
   function requestNotifPermission() {
     if (!('Notification' in window)) return;
-    if (Notification.permission === 'default') {
-      document.getElementById('btnNotifEnable').style.display = 'block';
-    }
+    if (Notification.permission === 'granted') return;
+    if (Notification.permission === 'denied') return;
+    Notification.requestPermission().then(perm => {
+      document.getElementById('btnNotifEnable').style.display =
+        perm === 'granted' ? 'none' : 'block';
+    });
   }
 
   function enableNotifs() {
