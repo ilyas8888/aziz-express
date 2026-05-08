@@ -451,6 +451,7 @@
 </div>
 
 <a href="admin-couriers.html" class="admin-link" id="adminPanel">👥 Gérer les coursiers →</a>
+<button class="admin-link" id="btnNotifEnable" onclick="enableNotifs()" style="display:none;border:none;cursor:pointer;width:calc(100% - 32px);text-align:left;border-left-color:#f59e0b">🔔 Activer les notifications de commandes</button>
 <div class="courier-greeting" id="courierGreeting" style="display:none">
   <div id="courierGreetName"></div>
   <div class="sub" id="courierGreetSub"></div>
@@ -558,9 +559,17 @@
   let knownDemandeIds = null; // null = premier chargement pas encore fait
 
   function requestNotifPermission() {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'default') {
+      document.getElementById('btnNotifEnable').style.display = 'block';
     }
+  }
+
+  function enableNotifs() {
+    Notification.requestPermission().then(perm => {
+      document.getElementById('btnNotifEnable').style.display =
+        perm === 'granted' ? 'none' : 'block';
+    });
   }
 
   function notifyNewDemande(d) {
