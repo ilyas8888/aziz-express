@@ -161,6 +161,38 @@
     .finished-banner .icon { font-size: 32px; margin-bottom: 6px; }
     .finished-banner h3 { font-size: 16px; font-weight: 700; }
     .finished-banner p  { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+
+    /* RATING */
+    .rating-section {
+      display: none;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #f0f0f0;
+      text-align: center;
+    }
+    .rating-title { font-size: 14px; font-weight: 700; color: #0F172A; margin-bottom: 4px; }
+    .rating-sub   { font-size: 12px; color: #94a3b8; margin-bottom: 12px; }
+    .stars-row    { display: flex; justify-content: center; gap: 10px; margin-bottom: 12px; }
+    .star         { font-size: 34px; color: #e2e8f0; cursor: pointer; transition: color 0.15s, transform 0.1s; user-select: none; line-height: 1; }
+    .star.active  { color: #FF5A1F; }
+    .star:hover   { transform: scale(1.15); }
+    .rating-comment {
+      width: 100%; border-radius: 10px;
+      border: 1.5px solid #e2e8f0; padding: 10px 12px;
+      font-size: 13px; font-family: 'Poppins', sans-serif;
+      resize: none; height: 60px; margin-bottom: 10px;
+      display: none; outline: none;
+    }
+    .rating-comment:focus { border-color: #FF5A1F; }
+    .btn-rating {
+      display: none;
+      background: #FF5A1F; color: white;
+      border: none; border-radius: 10px;
+      padding: 10px 28px; font-size: 14px;
+      font-weight: 600; font-family: 'Poppins', sans-serif;
+      cursor: pointer;
+    }
+    .rating-done { display: none; color: #22c55e; font-size: 14px; font-weight: 600; padding: 8px; }
   </style>
 </head>
 <body>
@@ -190,10 +222,10 @@
   <div class="courier-row">
     <div class="courier-avatar">🛵</div>
     <div class="courier-info">
-      <div class="courier-name">Aziz</div>
-      <div class="courier-sub">Votre livreur · En route</div>
+      <div class="courier-name" id="courierNameDisplay">Aziz Express</div>
+      <div class="courier-sub" id="courierSubDisplay">Votre livreur · En route</div>
     </div>
-    <a class="btn-call" href="https://wa.me/212616937149" target="_blank">📱</a>
+    <a class="btn-call" id="btnCallCourier" href="https://wa.me/212616937149" target="_blank" title="Contacter Aziz Express">📱</a>
   </div>
 
   <div class="info-row">
@@ -211,6 +243,22 @@
     <div class="icon">✅</div>
     <h3>Livraison terminée !</h3>
     <p>Merci d'avoir choisi Aziz Express</p>
+  </div>
+
+  <!-- RATING -->
+  <div class="rating-section" id="ratingSection">
+    <div class="rating-title">Comment s'est passée la livraison ?</div>
+    <div class="rating-sub">Votre avis aide Aziz à s'améliorer</div>
+    <div class="stars-row" id="starsRow">
+      <span class="star" data-val="1">★</span>
+      <span class="star" data-val="2">★</span>
+      <span class="star" data-val="3">★</span>
+      <span class="star" data-val="4">★</span>
+      <span class="star" data-val="5">★</span>
+    </div>
+    <textarea class="rating-comment" id="ratingComment" placeholder="Un commentaire ? (optionnel)"></textarea>
+    <button class="btn-rating" id="btnRating" onclick="submitRating()">Envoyer mon avis</button>
+    <div class="rating-done" id="ratingDone">Merci pour votre avis ! 🙏</div>
   </div>
 </div>
 
@@ -277,6 +325,41 @@
 
   let lastLocationAt = null;
   let deliveryActive = true;
+  let selectedStars  = 0;
+  let ratingShown    = false;
+
+  function showRating() {
+    if (ratingShown) return;
+    if (localStorage.getItem('rated_' + deliveryId)) return;
+    ratingShown = true;
+    const section = document.getElementById('ratingSection');
+    section.style.display = 'block';
+    document.querySelectorAll('.star').forEach(star => {
+      star.addEventListener('click', () => {
+        selectedStars = parseInt(star.dataset.val);
+        document.querySelectorAll('.star').forEach((s, i) => {
+          s.classList.toggle('active', i < selectedStars);
+        });
+        document.getElementById('ratingComment').style.display = 'block';
+        document.getElementById('btnRating').style.display     = 'inline-block';
+      });
+    });
+  }
+
+  function submitRating() {
+    if (!selectedStars) return;
+    db.ref('ratings/' + deliveryId).set({
+      stars:     selectedStars,
+      comment:   document.getElementById('ratingComment').value.trim(),
+      deliveryId,
+      timestamp: Date.now()
+    });
+    localStorage.setItem('rated_' + deliveryId, '1');
+    document.getElementById('starsRow').style.display      = 'none';
+    document.getElementById('ratingComment').style.display = 'none';
+    document.getElementById('btnRating').style.display     = 'none';
+    document.getElementById('ratingDone').style.display    = 'block';
+  }
 
   setInterval(() => {
     if (!deliveryActive || !lastLocationAt) return;
@@ -296,6 +379,11 @@
   db.ref('livraisons/' + deliveryId).on('value', snap => {
     const data = snap.val();
     if (!data) return;
+
+    // Nom dynamique du livreur
+    if (data.courierName) {
+      document.getElementById('courierNameDisplay').textContent = data.courierName;
+    }
 
     const hasPos = data.lat != null && data.lng != null;
     const pos    = hasPos ? [data.lat, data.lng] : null;
@@ -340,16 +428,18 @@
     // Statut
     if (!data.active) {
       deliveryActive = false;
-      document.getElementById('pulseDot').className = 'pulse-dot done';
-      document.getElementById('statusText').textContent = 'Livraison terminée';
+      document.getElementById('pulseDot').className       = 'pulse-dot done';
+      document.getElementById('statusText').textContent   = 'Livraison terminée';
+      document.getElementById('courierSubDisplay').textContent = 'Livraison terminée ✓';
       document.getElementById('finishedBanner').style.display = 'block';
       document.getElementById('distVal').textContent = '—';
       document.getElementById('etaVal').textContent  = '—';
       if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
+      setTimeout(showRating, 2000);
     } else if (hasPos && data.lastLocationAt && (Date.now() - data.lastLocationAt) < 30000) {
       deliveryActive = true;
-      document.getElementById('pulseDot').className = 'pulse-dot';
-      document.getElementById('statusText').textContent = '?? En route vers vous';
+      document.getElementById('pulseDot').className     = 'pulse-dot';
+      document.getElementById('statusText').textContent = '🛵 En route vers vous';
     }
   });
 </script>

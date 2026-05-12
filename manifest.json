@@ -1,0 +1,36 @@
+{
+  "name": "Aziz Express",
+  "short_name": "Aziz Express",
+  "description": "Livraison rapide à Oujda en moins de 60 minutes",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#FFF5F0",
+  "theme_color": "#FF5A1F",
+  "lang": "fr",
+  "categories": ["food", "shopping", "lifestyle"],
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Commander maintenant",
+      "short_name": "Commander",
+      "description": "Passer une commande de livraison",
+      "url": "./order.html",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

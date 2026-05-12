@@ -749,7 +749,8 @@
       `;
       card.querySelector('.btn-finish').onclick    = () => finishDelivery(d.id);
       card.querySelector('.btn-print-sm').onclick  = () => printDelivery(d);
-      card.querySelector('.btn-delete-sm').onclick = () => deleteDelivery(d.id);
+      const delBtn = card.querySelector('.btn-delete-sm');
+      delBtn.onclick = () => deleteDelivery(d.id, delBtn);
       if (currentRole === 'admin') {
         card.querySelector('.btn-transfer').onclick = () => transferDelivery(d.id, d.clientName || 'Client');
       }
@@ -820,8 +821,23 @@
     _finishId = null;
   }
 
-  function deleteDelivery(id) {
-    if (!confirm('Supprimer ?')) return;
+  function deleteDelivery(id, btn) {
+    if (btn.dataset.pending !== '1') {
+      btn.dataset.pending = '1';
+      const orig = btn.textContent;
+      btn.textContent = 'Confirmer ?';
+      btn.style.background = '#e74c3c';
+      btn.style.color = 'white';
+      btn.style.borderRadius = '10px';
+      btn._timer = setTimeout(() => {
+        btn.dataset.pending = '';
+        btn.textContent = orig;
+        btn.style.background = '';
+        btn.style.color = '';
+      }, 3000);
+      return;
+    }
+    clearTimeout(btn._timer);
     db.ref('livraisons/' + id).remove();
   }
 
@@ -931,7 +947,8 @@ ${(d.fraisClient || d.prixArticle) ? `
         </div>
       `;
       card.querySelector('.btn-accept').onclick = () => acceptDemande(d);
-      card.querySelector('.btn-refuse').onclick = () => refuseDemande(d.id);
+      const refBtn = card.querySelector('.btn-refuse');
+      refBtn.onclick = () => refuseDemande(d.id, refBtn);
       list.appendChild(card);
     });
   }
@@ -953,8 +970,18 @@ ${(d.fraisClient || d.prixArticle) ? `
     db.ref('demandes/' + d.id).remove();
   }
 
-  function refuseDemande(id) {
-    if (!confirm('Refuser cette demande ?')) return;
+  function refuseDemande(id, btn) {
+    if (btn.dataset.pending !== '1') {
+      btn.dataset.pending = '1';
+      const orig = btn.textContent;
+      btn.textContent = 'Confirmer ?';
+      btn._timer = setTimeout(() => {
+        btn.dataset.pending = '';
+        btn.textContent = orig;
+      }, 3000);
+      return;
+    }
+    clearTimeout(btn._timer);
     db.ref('demandes/' + id).remove();
   }
 

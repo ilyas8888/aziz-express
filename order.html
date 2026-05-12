@@ -169,6 +169,22 @@
       text-align: center; margin-top: 12px;
       line-height: 1.6;
     }
+
+    .field-error {
+      color: #e74c3c;
+      font-size: 12px;
+      font-weight: 500;
+      margin-top: 5px;
+      min-height: 16px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .field-error:empty { display: none; }
+
+    input.has-error, textarea.has-error {
+      border-color: #e74c3c !important;
+    }
   </style>
 </head>
 <body>
@@ -190,11 +206,13 @@
       <div class="step-title">👤 Vos informations</div>
       <div class="form-group">
         <label>Nom complet</label>
-        <input id="clientName" type="text" placeholder="Ex: Mohammed Alami" />
+        <input id="clientName" type="text" placeholder="Ex: Mohammed Alami" oninput="clearErr('errName','clientName')" />
+        <p class="field-error" id="errName"></p>
       </div>
       <div class="form-group">
         <label>Téléphone WhatsApp</label>
-        <input id="clientPhone" type="tel" placeholder="Ex: 0612345678" />
+        <input id="clientPhone" type="tel" placeholder="Ex: 0612345678" oninput="clearErr('errPhone','clientPhone')" />
+        <p class="field-error" id="errPhone"></p>
       </div>
     </div>
 
@@ -204,6 +222,7 @@
       <div id="map"></div>
       <div class="coords-display" id="coordsDisplay">Aucune position sélectionnée</div>
       <button class="btn-gps" onclick="useGPS()">📡 Utiliser ma position GPS</button>
+      <p class="field-error" id="errMap"></p>
       <div class="price-estimate" id="priceEstimate">
         <div class="price-val" id="priceVal">— DH</div>
         <div class="price-lbl">Frais de livraison estimés · Aziz confirme le prix exact</div>
@@ -305,15 +324,29 @@
   let _demandeRef = null;
   let _cancelTimer = null;
 
+  function setErr(id, inputId, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    if (inputId) {
+      document.getElementById(inputId).classList.toggle('has-error', !!msg);
+    }
+  }
+
+  function clearErr(id, inputId) {
+    setErr(id, inputId, '');
+  }
+
   function submitOrder() {
     const name    = document.getElementById('clientName').value.trim();
     const phone   = document.getElementById('clientPhone').value.trim();
     const details = document.getElementById('orderDetails').value.trim();
     const time    = document.getElementById('orderTime').value;
 
-    if (!name)        return alert('Entrez votre nom');
-    if (!phone)       return alert('Entrez votre téléphone');
-    if (!selectedLat) return alert('Marquez votre position sur la carte');
+    let valid = true;
+    if (!name)        { setErr('errName',  'clientName',  '⚠ Entrez votre nom'); valid = false; }
+    if (!phone)       { setErr('errPhone', 'clientPhone', '⚠ Entrez votre téléphone WhatsApp'); valid = false; }
+    if (!selectedLat) { setErr('errMap',   null,          '⚠ Marquez votre position sur la carte'); valid = false; }
+    if (!valid) return;
 
     const mapsLink = `https://maps.google.com/?q=${selectedLat},${selectedLng}`;
     const price = window._estimatedPrice || '—';
